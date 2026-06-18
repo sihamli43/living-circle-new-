@@ -1,0 +1,30 @@
+# ── Secrets ────────────────────────────────────────────────
+backend/.env
+frontend/.env
+frontend/.env.local
+frontend/.env*.local
+
+# ── Dependencies ────────────────────────────────────────────
+node_modules/
+frontend/node_modules/
+backend/__pycache__/
+backend/*.pyc
+backend/.venv/
+backend/venv/
+
+# ── Build outputs ───────────────────────────────────────────
+frontend/dist/
+frontend/.expo/
+frontend/expo-env.d.ts
+*.tsbuildinfo
+
+# ── OS / Editor ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/settings.json
+*.swp
+
+# ── Logs ────────────────────────────────────────────────────
+*.log
+npm-debug.log*

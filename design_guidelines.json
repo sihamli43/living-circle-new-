@@ -1,0 +1,174 @@
+{
+  "app_name": "Living Circle",
+  "personality": "4 Tactile / Playful LIGHT",
+  "personality_one_liner": "A warm, approachable, and tactile interface that feels like finding your best friends, using soft radii, chunky cards, and vibrant teal/coral accents to reduce the anxiety of moving.",
+  "color": {
+    "surface": "#FDFBF7",
+    "onSurface": "#1A1D1E",
+    "surfaceSecondary": "#F2EFE9",
+    "onSurfaceSecondary": "#3D4143",
+    "surfaceTertiary": "#E8E4DB",
+    "onSurfaceTertiary": "#5C6164",
+    "surfaceInverse": "#1A1D1E",
+    "onSurfaceInverse": "#FDFBF7",
+    "brand": "#0A878A",
+    "brandPrimary": "#0A878A",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#F26D5B",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#D9F0F0",
+    "onBrandTertiary": "#06595B",
+    "success": "#2B8A4D",
+    "onSuccess": "#FFFFFF",
+    "warning": "#D99414",
+    "onWarning": "#FFFFFF",
+    "error": "#D64545",
+    "onError": "#FFFFFF",
+    "info": "#0A878A",
+    "onInfo": "#FFFFFF",
+    "border": "#E8E4DB",
+    "borderStrong": "#B8B0A1",
+    "divider": "#E8E4DB"
+  },
+  "typography": {
+    "displayFontFamily": "Figtree",
+    "textFontFamily": "Nunito",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Use generous padding. Cards should not be flush to the edge (min md margin). Group related elements clearly, leaving breathing room to make the UI feel relaxed.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 8,
+    "md": 16,
+    "lg": 24,
+    "pill": 999
+  },
+  "shadow_tier": 2,
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use on the bottom tab bar when content scrolls behind it.",
+      "Use for sticky headers or bottom-sheet drag handles.",
+      "Use on floating action buttons (FABs) like the Pass/Like buttons overlaid on the swipe cards."
+    ],
+    "dont's": [
+      "Do not use on form fields, chips, or body text areas.",
+      "Do not use without a tinted base layer underneath to guarantee contrast."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Onboarding/Auth",
+      "purpose": "Quick, low-friction entry via mock OTP.",
+      "states": {
+        "loading": "Centered spinner over surface",
+        "empty": "N/A",
+        "error": "Inline text below input or snackbar"
+      },
+      "layout": "Centered large phone number input with a subtle borderStrong focus state. Sticky primary CTA ('Continue') pinned to the bottom above the keyboard. Top half of the screen can use a subtle brandTertiary background or abstract illustration."
+    },
+    {
+      "name": "Profile Setup & Lifestyle Questionnaire",
+      "purpose": "Hinge-style onboarding flow to collect demographics and lifestyle habits one step at a time.",
+      "states": {
+        "loading": "Skeleton of chips loading",
+        "empty": "N/A",
+        "error": "Inline error for missing selections"
+      },
+      "layout": "One question per screen. Large, friendly pill buttons/chips for options (e.g., Veg/Non-veg) grouped centrally. Progress bar at the top just below the safe area. Sticky primary CTA at the bottom. The UI should feel lightweight and expressive."
+    },
+    {
+      "name": "Listing Creation",
+      "purpose": "Form to capture apartment details for users who have a place.",
+      "states": {
+        "loading": "Spinner during image upload",
+        "empty": "N/A",
+        "error": "Validation errors below missing fields"
+      },
+      "layout": "Vertical scrollable single-column form. Use large hit targets. A ₹ budget slider with clear value labels. Toggle chips for amenities. Sticky 'Post Listing' CTA at the bottom inside a KeyboardAvoidingView."
+    },
+    {
+      "name": "Discover (Swipe)",
+      "purpose": "Tinder-style swipe cards to find compatible roommates.",
+      "states": {
+        "loading": "Pulsing blank card skeleton",
+        "empty": "Illustration of an empty room with 'You have seen everyone!' and a button to widen filters",
+        "error": "Error message 'Could not load profiles' with 'Retry' CTA"
+      },
+      "layout": "Hero screen. Full-screen cards stacked with slight overlap. The card is primarily an image with a strict gradient scrim (transparent to >=70% surfaceInverse) at the bottom 40%. Text over the scrim uses onSurfaceInverse and includes Name, Age, ₹ Budget, Locality, and a Compatibility Score badge. Floating circular action buttons (Pass, Like) sit at the bottom of the screen."
+    },
+    {
+      "name": "Matches & Chat",
+      "purpose": "View mutual matches and engage in basic polling chat.",
+      "states": {
+        "loading": "List of skeleton rows",
+        "empty": "Illustration showing two speech bubbles with 'No matches yet. Keep swiping!'",
+        "error": "Toast 'Failed to send message'"
+      },
+      "layout": "Top section: Horizontal scroll of 'New Matches' using avatars (real images or gradient initials). Bottom section: Vertical list of active chats. Chat screen has a sticky top header showing the user's name and compatibility summary, and a standard message list below."
+    },
+    {
+      "name": "Profile/Settings",
+      "purpose": "Manage account, lifestyle tags, and preferences.",
+      "states": {
+        "loading": "Profile skeleton",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Top cover banner (tinted brandTertiary or user uploaded). Large avatar overlapping the banner bottom edge. List items below are grouped settings rows. Each row has a leading icon inside a tinted brandTertiary rounded square."
+    }
+  ],
+  "images": {
+    "onboarding_bg": {
+      "url": "https://images.unsplash.com/photo-1772724317387-7e763804b637?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzF8MHwxfHNlYXJjaHwxfHxmcmllbmRzJTIwaGFuZ2luZyUyMG91dCUyMGFwYXJ0bWVudHxlbnwwfHx8fDE3ODEyODc4MjJ8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Friends hanging out in an apartment"
+    },
+    "swipe_card_sample": {
+      "url": "https://images.unsplash.com/photo-1720247520862-7e4b14176fa8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBpbmRpYW4lMjBhcGFydG1lbnQlMjBpbnRlcmlvcnxlbnwwfHx8fDE3ODEyODc4MjJ8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Modern Indian apartment interior living room"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Implement the Tinder-style swipe interface using react-native-reanimated and react-native-gesture-handler. Ensure cards stack smoothly with physical inertia.",
+    "MANDATORY: On the Swipe cards, where text overlays the background image, implement a gradient scrim at the bottom 40% going from transparent to 80% opacity surfaceInverse. Render all overlay text in onSurfaceInverse. Never place text directly on images without this scrim.",
+    "For seed profiles missing an image, use the fallback Initials Avatar: A pill/circle with a brandTertiary background and the user's initials centrally aligned in onBrandTertiary text. NO random system icons for users.",
+    "Build the Lifestyle Questionnaire mirroring Hinge's pattern: strictly one question per screen, use large chunky pill buttons/chips for answers, a top progress bar, and a sticky CTA anchored above the home indicator.",
+    "Provide specific haptic feedback: 'success' or 'light' for a right swipe (Like), 'rigid' for a left swipe (Pass), and 'selection' for tapping questionnaire chips.",
+    "Ensure safe area is respected on all screens. Content should never sit under the notch or home indicator. Sticky CTAs must factor in bottom safe area padding."
+  ],
+  "haptics": {
+    "swipe_right": "success or light",
+    "swipe_left": "rigid",
+    "chip_select": "selection",
+    "tab_switch": "light",
+    "primary_cta_press": "medium"
+  }
+}
