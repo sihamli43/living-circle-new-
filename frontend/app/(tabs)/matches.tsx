@@ -28,6 +28,23 @@ const PHOTO_EMOJI: Record<string, string> = {
   "Other": "📷",
 };
 
+const LIFESTYLE_META: Record<string, { emoji: string; label: string }> = {
+  food:               { emoji: "🍽️", label: "Food" },
+  smoking:            { emoji: "🚭", label: "Smoking" },
+  drinking:           { emoji: "🍺", label: "Drinking" },
+  sleep:              { emoji: "🌙", label: "Sleep" },
+  cleanliness:        { emoji: "🧹", label: "Cleanliness" },
+  guests:             { emoji: "🤝", label: "Guests" },
+  pets:               { emoji: "🐾", label: "Pets" },
+  religion:           { emoji: "🙏", label: "Religion" },
+  work_timing:        { emoji: "⏰", label: "Work hours" },
+  cooking:            { emoji: "👨‍🍳", label: "Cooking" },
+  noise:              { emoji: "🎵", label: "Noise level" },
+  relationship_status:{ emoji: "💑", label: "Relationship" },
+  overnight_guests:   { emoji: "🛏️", label: "Overnight guests" },
+  sharing_habits:     { emoji: "🤲", label: "Sharing" },
+};
+
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function UnmatchButton({ matchId, onPress }: { matchId: string; onPress: () => void }) {
@@ -111,9 +128,13 @@ export default function Matches() {
                 </Text>
               </View>
               {item.user.shared?.length > 0 && (
-                <Text style={styles.shared} numberOfLines={2}>
-                  {item.user.shared.slice(0, 2).join(" · ")}
-                </Text>
+                <View style={styles.sharedChips}>
+                  {item.user.shared.slice(0, 3).map((s: string, i: number) => (
+                    <View key={i} style={styles.sharedChip}>
+                      <Text style={styles.sharedChipText} numberOfLines={1}>{s}</Text>
+                    </View>
+                  ))}
+                </View>
               )}
               <View style={styles.actions}>
                 <PressableScale
@@ -121,7 +142,7 @@ export default function Matches() {
                   onPress={() => setProfileUser(item.user)}
                   style={[styles.actionBtn, styles.viewBtn]}
                 >
-                  <Ionicons name="person-outline" size={14} color={C.brand} />
+                  <Ionicons name="person-outline" size={14} color={C.cyan} />
                   <Text style={styles.viewBtnText}>View profile</Text>
                 </PressableScale>
                 <PressableScale
@@ -207,9 +228,20 @@ function ProfileModal({ user, onClose }: { user: any | null; onClose: () => void
             </Section>
 
             <Section title="Lifestyle">
-              {Object.entries(user.lifestyle || {})
-                .filter(([, v]) => v)
-                .map(([k, v]) => <Row key={k} icon="sparkles-outline" label={k.replace(/_/g, " ")} value={String(v)} />)}
+              <View style={styles.lifestyleGrid}>
+                {Object.entries(user.lifestyle || {})
+                  .filter(([, v]) => v)
+                  .map(([k, v]) => {
+                    const meta = LIFESTYLE_META[k] ?? { emoji: "✨", label: k.replace(/_/g, " ") };
+                    return (
+                      <View key={k} style={styles.lifestyleTile}>
+                        <Text style={styles.lifestyleTileEmoji}>{meta.emoji}</Text>
+                        <Text style={styles.lifestyleTileLabel} numberOfLines={1}>{meta.label}</Text>
+                        <Text style={styles.lifestyleTileValue} numberOfLines={2}>{String(v)}</Text>
+                      </View>
+                    );
+                  })}
+              </View>
             </Section>
 
             {user.listing_type === "has_place" && (user.listing?.photos?.length || user.listing?.description) ? (
@@ -300,6 +332,33 @@ const styles = StyleSheet.create({
   compatRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   compatText: { fontSize: 13, color: C.cyan, fontWeight: "800" },
   shared: { fontSize: 12, color: C.onSurfaceTertiary, textAlign: "center", marginTop: 4 },
+  sharedChips: {
+    flexDirection: "row", flexWrap: "wrap", justifyContent: "center",
+    gap: 6, marginTop: S.sm, paddingHorizontal: S.sm,
+  },
+  sharedChip: {
+    backgroundColor: "rgba(0,217,255,0.1)",
+    borderWidth: 1, borderColor: "rgba(0,217,255,0.3)",
+    borderRadius: R.pill, paddingHorizontal: S.md, paddingVertical: 4,
+    maxWidth: 160,
+  },
+  sharedChipText: { color: C.cyan, fontSize: 11, fontWeight: "600" },
+  lifestyleGrid: {
+    flexDirection: "row", flexWrap: "wrap", gap: S.md, marginTop: S.sm,
+  },
+  lifestyleTile: {
+    width: "47%",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderWidth: 1, borderColor: "rgba(0,217,255,0.15)",
+    borderRadius: R.md, padding: S.md,
+    gap: 4,
+  },
+  lifestyleTileEmoji: { fontSize: 22 },
+  lifestyleTileLabel: {
+    fontSize: 11, color: C.onSurfaceTertiary, fontWeight: "700",
+    textTransform: "uppercase", letterSpacing: 0.5,
+  },
+  lifestyleTileValue: { fontSize: 14, color: "#FFFFFF", fontWeight: "600" },
   actions: { flexDirection: "row", gap: S.sm, marginTop: S.md, width: "100%" },
   actionBtn: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
