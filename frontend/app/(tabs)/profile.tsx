@@ -168,7 +168,7 @@ function Row({ icon, label, value }: { icon: any; label: string; value: string }
   return (
     <View style={styles.row}>
       <View style={styles.rowIcon}>
-        <Ionicons name={icon} size={16} color={C.onBrandTint} />
+        <Ionicons name={icon} size={16} color={C.cyan} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.rowLabel}>{label}</Text>
@@ -179,46 +179,45 @@ function Row({ icon, label, value }: { icon: any; label: string; value: string }
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.surface },
+  safe: { flex: 1, backgroundColor: "#0F0F1E" },
   topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: S.sm,
-    paddingHorizontal: S.xl,
-    paddingTop: S.md,
-    paddingBottom: S.sm,
+    flexDirection: "row", alignItems: "center", gap: S.sm,
+    paddingHorizontal: S.xl, paddingTop: S.md, paddingBottom: S.sm,
+    borderBottomWidth: 1, borderBottomColor: "rgba(0,217,255,0.12)",
   },
-  topBrand: { fontSize: 18, fontWeight: "800", color: C.brand },
-  cover: { height: 140, alignItems: "center", justifyContent: "flex-end" },
+  topBrand: { fontSize: 18, fontWeight: "900", color: "#FFFFFF", letterSpacing: 1 },
+  cover: { height: 140, alignItems: "center", justifyContent: "flex-end", backgroundColor: "#1A1A2E" },
   avatarWrap: {
     position: "absolute", bottom: -48,
-    padding: 4, backgroundColor: C.surface, borderRadius: 999,
+    padding: 4, backgroundColor: "#0F0F1E", borderRadius: 999,
+    borderWidth: 2, borderColor: "rgba(0,217,255,0.5)",
   },
-  name: { fontSize: 24, fontWeight: "800", color: C.onSurface },
+  name: { fontSize: 24, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.3 },
   meta: { fontSize: 14, color: C.onSurfaceSecondary, marginTop: 2 },
-  localityHint: { fontSize: 12, color: C.coral, fontWeight: "600", marginTop: S.sm, textAlign: "center" },
+  localityHint: { fontSize: 12, color: C.cyan, fontWeight: "600", marginTop: S.sm, textAlign: "center" },
   section: { marginTop: S.xl, paddingHorizontal: S.xl },
-  sectionTitle: { fontSize: 13, color: C.onSurfaceTertiary, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: S.md },
+  sectionTitle: { fontSize: 12, color: C.cyan, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: S.md },
   row: { flexDirection: "row", alignItems: "center", paddingVertical: S.sm, gap: S.md },
   rowIcon: {
     width: 32, height: 32, borderRadius: R.sm,
-    backgroundColor: C.brandTint, alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(0,217,255,0.1)", alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "rgba(0,217,255,0.2)",
   },
   rowLabel: { fontSize: 12, color: C.onSurfaceTertiary, textTransform: "capitalize" },
-  rowValue: { fontSize: 15, color: C.onSurface, fontWeight: "600" },
+  rowValue: { fontSize: 15, color: "#FFFFFF", fontWeight: "600" },
   actionRow: {
     flexDirection: "row", alignItems: "center", gap: S.md,
-    paddingVertical: S.lg, borderBottomWidth: 1, borderBottomColor: C.border,
+    paddingVertical: S.lg, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.07)",
   },
-  actionText: { flex: 1, fontSize: 15, color: C.onSurface, fontWeight: "600" },
+  actionText: { flex: 1, fontSize: 15, color: "#FFFFFF", fontWeight: "600" },
   safetyCard: {
     marginTop: S.xl, marginHorizontal: S.xl,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "rgba(0,217,255,0.05)",
     borderRadius: R.lg, padding: S.lg,
-    borderWidth: 1, borderColor: "#BFDBFE",
+    borderWidth: 1, borderColor: C.borderCyan,
   },
   safetyHeader: { flexDirection: "row", alignItems: "center", gap: S.sm, marginBottom: S.md },
-  safetyTitle: { fontSize: 16, fontWeight: "800", color: C.brand },
+  safetyTitle: { fontSize: 16, fontWeight: "800", color: C.cyan },
   safetyTips: { gap: S.sm, marginBottom: S.md },
   safetyTipRow: { flexDirection: "row", alignItems: "flex-start", gap: S.sm },
   safetyTipText: { flex: 1, fontSize: 13, color: C.onSurfaceSecondary, lineHeight: 18 },
@@ -226,7 +225,7 @@ const styles = StyleSheet.create({
   safetyBtn: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 5, paddingVertical: S.sm, borderRadius: R.pill,
-    borderWidth: 1, borderColor: C.coral, backgroundColor: C.surface,
+    borderWidth: 1, borderColor: C.borderCoral, backgroundColor: "rgba(255,0,110,0.08)",
   },
   safetyBtnText: { fontSize: 12, fontWeight: "700" },
   legalSection: {
@@ -236,7 +235,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", flexWrap: "wrap",
     justifyContent: "center", gap: S.sm, marginBottom: S.md,
   },
-  legalLink: { fontSize: 13, color: C.brand, fontWeight: "600", textDecorationLine: "underline" },
+  legalLink: { fontSize: 13, color: C.cyan, fontWeight: "600", textDecorationLine: "underline" },
   legalSep: { fontSize: 13, color: C.onSurfaceTertiary },
   legalFooter: {
     fontSize: 11, color: C.onSurfaceTertiary, textAlign: "center", lineHeight: 17,

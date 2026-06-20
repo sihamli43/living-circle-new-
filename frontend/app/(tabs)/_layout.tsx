@@ -7,17 +7,17 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: C.brand,
-        tabBarInactiveTintColor: C.onSurfaceTertiary,
+        tabBarActiveTintColor: "#00D9FF",
+        tabBarInactiveTintColor: "#64748B",
         tabBarStyle: {
-          backgroundColor: C.surface,
-          borderTopColor: C.border,
+          backgroundColor: "#0F0F1E",
+          borderTopColor: "rgba(0,217,255,0.15)",
           height: 64,
           paddingTop: 6,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
         animation: "fade",
-        sceneStyle: { backgroundColor: C.surface },
+        sceneStyle: { backgroundColor: "#0F0F1E" },
       }}
     >
       <Tabs.Screen

@@ -31,7 +31,7 @@ import { PressableScale } from "@/src/components/PressableScale";
 import { api } from "@/src/api/client";
 import { Avatar } from "@/src/components/Avatar";
 import { Chip, ChipRow } from "@/src/components/OnboardScreen";
-import { ACTIVE_CITY, ACTIVE_LOCALITIES, C, CARD_SHADOW, R, S, paletteFor } from "@/src/theme/colors";
+import { ACTIVE_CITY, ACTIVE_LOCALITIES, C, CARD_SHADOW, GLOW_CYAN, GLOW_CORAL, R, S, paletteFor } from "@/src/theme/colors";
 
 const { width: W, height: H } = Dimensions.get("window");
 const SWIPE_THRESHOLD = W * 0.28;
@@ -158,21 +158,21 @@ function Card({
 
         {p.compatibility != null ? (
           <View style={styles.compatBadge} testID={`compat-${p.user_id}`}>
-            <Ionicons name="flame" size={11} color={C.coral} />
-            <Text style={styles.compatBadgeText} numberOfLines={1}>{p.compatibility}% match</Text>
+            <Text style={styles.compatBadgeNum}>{p.compatibility}%</Text>
+            <Text style={styles.compatBadgeLabel}> match</Text>
           </View>
         ) : (
-          <View style={styles.compatBadge} testID={`compat-${p.user_id}`}>
-            <Text style={styles.compatBadgeText} numberOfLines={1}>New user</Text>
+          <View style={[styles.compatBadge, { borderColor: C.borderCyan }]} testID={`compat-${p.user_id}`}>
+            <Text style={styles.compatBadgeLabel}>New ✨</Text>
           </View>
         )}
 
 
         <Animated.View style={[styles.stamp, styles.likeStamp, likeStyle]}>
-          <Text style={styles.stampText}>LIKE</Text>
+          <Text style={[styles.stampText, { color: C.cyan }]}>LIKE</Text>
         </Animated.View>
         <Animated.View style={[styles.stamp, styles.passStamp, passStyle]}>
-          <Text style={styles.stampText}>PASS</Text>
+          <Text style={[styles.stampText, { color: C.coral }]}>PASS</Text>
         </Animated.View>
 
         <LinearGradient
@@ -298,7 +298,7 @@ export default function Discover() {
   const remaining = profiles.slice(idx, idx + 3).reverse();
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: C.surface }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: C.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
         <View style={styles.header}>
           <View style={styles.brandRow}>
@@ -310,17 +310,14 @@ export default function Discover() {
             onPress={() => setShowFilters(true)}
             style={styles.filterBtn}
           >
-            <Ionicons name="options-outline" size={22} color={C.brand} />
+            <Ionicons name="options-outline" size={22} color={C.cyan} />
           </PressableScale>
         </View>
 
         <View style={styles.bannerPrimary}>
           <Text style={styles.bannerPrimaryText}>
-            🏙️ Living in Bangalore? Discover your perfect roommate here.
+            🏙️ Bangalore&apos;s #1 roommate finder
           </Text>
-        </View>
-        <View style={styles.bannerAccent}>
-          <Text style={styles.bannerAccentText}>🏙️ Discover roommates in Bangalore</Text>
         </View>
 
         <View style={styles.deck}>
@@ -359,17 +356,17 @@ export default function Discover() {
           <View style={styles.actions}>
             <PressableScale
               testID="pass-button"
-              style={[styles.actionBtn, CARD_SHADOW, { borderColor: C.error }]}
+              style={[styles.actionBtn, GLOW_CORAL, { borderColor: C.coral }]}
               onPress={() => handleSwipe(profiles[idx].user_id, "pass")}
             >
-              <Ionicons name="close" size={32} color={C.error} />
+              <Ionicons name="close" size={32} color={C.coral} />
             </PressableScale>
             <PressableScale
               testID="like-button"
-              style={[styles.actionBtn, CARD_SHADOW, { borderColor: C.brand, backgroundColor: C.brand }]}
+              style={[styles.actionBtn, GLOW_CYAN, { borderColor: C.cyan, backgroundColor: "rgba(0,217,255,0.12)" }]}
               onPress={() => handleSwipe(profiles[idx].user_id, "like")}
             >
-              <Ionicons name="heart" size={30} color={C.onBrand} />
+              <Ionicons name="heart" size={30} color={C.cyan} />
             </PressableScale>
           </View>
         )}
@@ -515,149 +512,101 @@ function MatchModal({ match, onClose }: { match: any; onClose: () => void }) {
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: S.xl,
-    paddingVertical: S.md,
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    paddingHorizontal: S.xl, paddingVertical: S.md,
+    borderBottomWidth: 1, borderBottomColor: "rgba(0,217,255,0.12)",
   },
   brandRow: { flexDirection: "row", alignItems: "center", gap: S.sm },
-  brand: { fontSize: 20, fontWeight: "800", color: C.brand, letterSpacing: -0.5 },
+  brand: { fontSize: 18, fontWeight: "900", color: "#FFFFFF", letterSpacing: 1 },
   filterBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: C.brandTint,
-    alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(0,217,255,0.08)", alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: C.borderCyan,
   },
   bannerPrimary: {
-    marginHorizontal: S.xl,
-    marginBottom: S.sm,
-    backgroundColor: C.brandTint,
-    borderRadius: R.md,
-    paddingVertical: S.sm,
-    paddingHorizontal: S.md,
-    borderWidth: 1,
-    borderColor: C.border,
+    marginHorizontal: S.xl, marginVertical: S.sm,
+    backgroundColor: "rgba(0,217,255,0.07)",
+    borderRadius: R.md, paddingVertical: S.sm, paddingHorizontal: S.md,
+    borderWidth: 1, borderColor: C.borderCyan,
   },
-  bannerPrimaryText: { fontSize: 13, color: C.onBrandTint, fontWeight: "600", lineHeight: 18 },
-  bannerAccent: {
-    marginHorizontal: S.xl,
-    marginBottom: S.sm,
-    backgroundColor: C.coral,
-    borderRadius: R.md,
-    paddingVertical: S.sm,
-    paddingHorizontal: S.md,
-  },
-  bannerAccentText: { fontSize: 13, color: C.onCoral, fontWeight: "700", textAlign: "center" },
+  bannerPrimaryText: { fontSize: 12, color: C.cyan, fontWeight: "700", letterSpacing: 0.5 },
   deck: { flex: 1, alignItems: "center", justifyContent: "center" },
   card: {
-    position: "absolute",
-    width: W * 0.9,
-    height: H * 0.58,
-    borderRadius: R.lg,
-    backgroundColor: C.surfaceSecondary,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: C.border,
+    position: "absolute", width: W * 0.88, height: H * 0.60,
+    borderRadius: R.lg, backgroundColor: "#1A1A2E",
+    overflow: "hidden", borderWidth: 1.5, borderColor: "rgba(0,217,255,0.25)",
+    ...CARD_SHADOW,
   },
   avatarFallback: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "center",
+    ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center",
+    backgroundColor: "#1A1A2E",
   },
   photosLockedBanner: {
-    position: "absolute",
-    top: S.lg,
-    left: S.lg,
-    zIndex: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "rgba(30,58,138,0.88)",
-    paddingHorizontal: S.md,
-    paddingVertical: 6,
-    borderRadius: R.pill,
+    position: "absolute", top: S.lg, left: S.lg, zIndex: 12,
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: "rgba(255,0,110,0.85)",
+    paddingHorizontal: S.md, paddingVertical: 6, borderRadius: R.pill,
   },
-  photosLockedText: { color: C.onBrand, fontSize: 11, fontWeight: "700" },
+  photosLockedText: { color: "#FFFFFF", fontSize: 11, fontWeight: "700" },
   compatBadge: {
-    position: "absolute",
-    top: S.lg,
-    right: S.lg,
-    zIndex: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(255,255,255,0.95)",
-    paddingHorizontal: S.md,
-    paddingVertical: 5,
-    borderRadius: R.pill,
-    maxWidth: 120,
-    borderWidth: 1,
-    borderColor: C.border,
+    position: "absolute", top: S.lg, right: S.lg, zIndex: 12,
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.75)",
+    paddingHorizontal: S.md, paddingVertical: 5, borderRadius: R.pill,
+    borderWidth: 1.5, borderColor: "rgba(255,0,110,0.6)",
   },
-  compatBadgeText: { color: C.onSurface, fontWeight: "800", fontSize: 11 },
+  compatBadgeNum: { color: "#FF006E", fontWeight: "900", fontSize: 14 },
+  compatBadgeLabel: { color: "#FFFFFF", fontWeight: "600", fontSize: 11, opacity: 0.9 },
   stamp: {
-    position: "absolute", top: 40, padding: S.sm,
-    borderWidth: 3, borderRadius: R.md, zIndex: 5,
+    position: "absolute", top: 40, padding: S.sm, borderWidth: 2.5, borderRadius: R.md, zIndex: 5,
   },
-  likeStamp: { left: 24, borderColor: C.brand, transform: [{ rotate: "-12deg" }] },
-  passStamp: { right: 24, borderColor: C.error, transform: [{ rotate: "12deg" }] },
-  stampText: { fontSize: 32, fontWeight: "900", color: C.brand },
-  scrim: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
-    paddingTop: 120,
-  },
-  info: { padding: S.xl, paddingBottom: S.xl, gap: S.md },
+  likeStamp: { left: 24, borderColor: C.cyan, transform: [{ rotate: "-12deg" }] },
+  passStamp: { right: 24, borderColor: C.coral, transform: [{ rotate: "12deg" }] },
+  stampText: { fontSize: 32, fontWeight: "900", letterSpacing: 2 },
+  scrim: { position: "absolute", bottom: 0, left: 0, right: 0, paddingTop: 120 },
+  info: { padding: S.xl, paddingBottom: S.lg, gap: S.md },
   headerRow: { flexDirection: "row", alignItems: "center", gap: S.md },
   avatarRing: {
     width: 52, height: 52, borderRadius: 26,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.85)",
+    borderWidth: 2, borderColor: "rgba(0,217,255,0.7)",
     alignItems: "center", justifyContent: "center", overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(0,217,255,0.08)",
   },
-  name: { color: C.onSurfaceInverse, fontSize: 22, fontWeight: "800", letterSpacing: -0.3 },
+  name: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", letterSpacing: 0.3 },
   subRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, flexWrap: "wrap" },
-  tag: { backgroundColor: C.coral, paddingHorizontal: S.md, paddingVertical: 4, borderRadius: R.pill },
-  tagText: { color: C.onCoral, fontWeight: "700", fontSize: 11 },
+  tag: { backgroundColor: "rgba(255,0,110,0.85)", paddingHorizontal: S.md, paddingVertical: 4, borderRadius: R.pill },
+  tagText: { color: "#FFFFFF", fontWeight: "700", fontSize: 11 },
   metaBlock: { gap: 2 },
-  meta: { color: C.onSurfaceInverse, fontSize: 13, opacity: 0.95, lineHeight: 18 },
-  metaMuted: { color: C.onSurfaceInverse, fontSize: 12, opacity: 0.75, lineHeight: 16 },
+  meta: { color: "#FFFFFF", fontSize: 13, lineHeight: 18 },
+  metaMuted: { color: "rgba(255,255,255,0.7)", fontSize: 12, lineHeight: 16 },
   lifestyleRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: S.sm },
   pill: {
-    backgroundColor: "rgba(255,255,255,0.22)",
-    paddingHorizontal: S.md, paddingVertical: 5,
-    borderRadius: R.pill,
+    backgroundColor: "rgba(0,217,255,0.12)", paddingHorizontal: S.md, paddingVertical: 5,
+    borderRadius: R.pill, borderWidth: 1, borderColor: "rgba(0,217,255,0.25)",
   },
-  pillText: { color: C.onSurfaceInverse, fontSize: 12, fontWeight: "600" },
-  bio: {
-    color: C.onSurfaceInverse, fontSize: 13, lineHeight: 19,
-    fontStyle: "italic", opacity: 0.92, marginTop: 0,
-  },
-  actions: {
-    flexDirection: "row", justifyContent: "center", gap: S.xl,
-    paddingBottom: S.lg, paddingTop: S.sm,
-  },
+  pillText: { color: C.cyan, fontSize: 12, fontWeight: "600" },
+  bio: { color: "rgba(255,255,255,0.85)", fontSize: 13, lineHeight: 19, fontStyle: "italic" },
+  actions: { flexDirection: "row", justifyContent: "center", gap: S.xxl, paddingBottom: S.lg, paddingTop: S.sm },
   actionBtn: {
-    width: 64, height: 64, borderRadius: 32,
-    borderWidth: 1,
-    backgroundColor: C.surface,
-    alignItems: "center", justifyContent: "center",
+    width: 68, height: 68, borderRadius: 34, backgroundColor: "rgba(255,255,255,0.05)",
+    alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: C.border,
   },
-  empty: { textAlign: "center", color: C.onSurfaceSecondary, marginTop: 40 },
+  empty: { textAlign: "center", color: C.onSurfaceTertiary, marginTop: 40 },
   emptyWrap: { alignItems: "center", padding: S.xxl },
-  emptyTitle: { fontSize: 20, fontWeight: "700", color: C.onSurface, marginTop: S.lg },
-  emptySub: { fontSize: 14, color: C.onSurfaceSecondary, marginTop: S.sm },
-  refreshBtn: { marginTop: S.xl, backgroundColor: C.brand, paddingHorizontal: S.xl, paddingVertical: S.md, borderRadius: R.pill },
-  refreshText: { color: C.onBrand, fontWeight: "700" },
-  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  sheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "85%" },
-  sheetHandle: { width: 40, height: 4, backgroundColor: C.borderStrong, borderRadius: 2, alignSelf: "center", marginTop: S.md },
-  h1: { fontSize: 24, fontWeight: "800", color: C.onSurface },
+  emptyTitle: { fontSize: 20, fontWeight: "800", color: "#FFFFFF", marginTop: S.lg, letterSpacing: 0.5 },
+  emptySub: { fontSize: 14, color: C.onSurfaceTertiary, marginTop: S.sm },
+  refreshBtn: { marginTop: S.xl, backgroundColor: "#FF006E", paddingHorizontal: S.xl, paddingVertical: S.md, borderRadius: R.pill },
+  refreshText: { color: "#FFFFFF", fontWeight: "700" },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
+  sheet: { backgroundColor: "#1A1A2E", borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "85%", borderWidth: 1, borderColor: C.borderCyan },
+  sheetHandle: { width: 40, height: 4, backgroundColor: C.borderCyan, borderRadius: 2, alignSelf: "center", marginTop: S.md },
+  h1: { fontSize: 24, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.5 },
   filterLabel: { fontSize: 14, color: C.onSurfaceSecondary, marginTop: S.lg, marginBottom: S.sm, fontWeight: "600" },
   fInput: {
-    backgroundColor: C.surfaceSecondary, borderRadius: R.md,
-    paddingHorizontal: S.lg, paddingVertical: S.md, fontSize: 16, color: C.onSurface,
-    borderWidth: 1, borderColor: C.border,
+    backgroundColor: "rgba(255,255,255,0.07)", borderRadius: R.md,
+    paddingHorizontal: S.lg, paddingVertical: S.md, fontSize: 16, color: "#FFFFFF",
+    borderWidth: 1, borderColor: C.borderCyan,
   },
-  cta: { backgroundColor: C.brand, paddingVertical: S.lg, borderRadius: R.pill, alignItems: "center" },
-  ctaText: { color: C.onBrand, fontSize: 16, fontWeight: "700" },
+  cta: { backgroundColor: "#FF006E", paddingVertical: S.lg, borderRadius: R.pill, alignItems: "center" },
+  ctaText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
 });

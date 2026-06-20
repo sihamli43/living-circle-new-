@@ -56,7 +56,7 @@ export default function EmailScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-      <LinearGradient colors={[C.brandTint, C.surface]} style={styles.hero}>
+      <LinearGradient colors={["#1A1A2E", "#0F0F1E"]} style={styles.hero}>
         <Text style={styles.brand} testID="brand-name">Living Circle</Text>
         <Text style={styles.tag}>Find your people, find your place.</Text>
       </LinearGradient>
@@ -131,52 +131,57 @@ export default function EmailScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.surface },
+  safe: { flex: 1, backgroundColor: "#0F0F1E" },
   hero: { paddingHorizontal: S.xl, paddingVertical: S.xxl, alignItems: "flex-start" },
-  brand: { fontSize: 32, fontWeight: "800", color: C.brand, letterSpacing: -0.5 },
-  tag: { fontSize: 16, color: C.onSurfaceSecondary, marginTop: S.sm },
+  brand: { fontSize: 32, fontWeight: "900", color: "#FFFFFF", letterSpacing: 1 },
+  tag: { fontSize: 16, color: "#CBD5E1", marginTop: S.sm },
   body: { flex: 1, paddingTop: S.xxl },
-  h1: { fontSize: 24, fontWeight: "700", color: C.onSurface },
-  sub: { fontSize: 14, color: C.onSurfaceSecondary, marginTop: S.sm, marginBottom: S.xl },
+  h1: { fontSize: 24, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.3 },
+  sub: { fontSize: 14, color: "#CBD5E1", marginTop: S.sm, marginBottom: S.xl },
   input: {
-    backgroundColor: C.surfaceSecondary,
+    backgroundColor: "rgba(255,255,255,0.07)",
     borderRadius: R.md,
     paddingHorizontal: S.lg,
     paddingVertical: S.lg,
     fontSize: 17,
-    color: C.onSurface,
+    color: "#FFFFFF",
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: "rgba(0,217,255,0.4)",
   },
-  err: { color: C.error, marginTop: S.md, fontSize: 14 },
+  err: { color: "#FF4444", marginTop: S.md, fontSize: 14 },
   checkRow: {
     flexDirection: "row", alignItems: "flex-start", gap: S.md,
     marginTop: S.lg,
   },
   checkbox: {
     width: 22, height: 22, borderRadius: 6,
-    borderWidth: 1.5, borderColor: C.border,
-    backgroundColor: C.surfaceSecondary,
+    borderWidth: 1.5, borderColor: "rgba(0,217,255,0.5)",
+    backgroundColor: "rgba(255,255,255,0.05)",
     alignItems: "center", justifyContent: "center",
     marginTop: 1,
   },
-  checkboxChecked: { backgroundColor: C.brand, borderColor: C.brand },
-  checkLabel: { flex: 1, fontSize: 14, color: C.onSurfaceSecondary, lineHeight: 20 },
-  checkLink: { color: C.brand, fontWeight: "700", textDecorationLine: "underline" },
+  checkboxChecked: { backgroundColor: "#00D9FF", borderColor: "#00D9FF" },
+  checkLabel: { flex: 1, fontSize: 14, color: "#FFFFFF", lineHeight: 20 },
+  checkLink: { color: "#00D9FF", fontWeight: "700", textDecorationLine: "underline" },
   cta: {
     margin: S.xl,
     marginBottom: S.sm,
-    backgroundColor: C.brand,
+    backgroundColor: "#FF006E",
     paddingVertical: S.lg,
     borderRadius: R.pill,
     alignItems: "center",
+    shadowColor: "#FF006E",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 14,
+    elevation: 8,
   },
-  ctaDisabled: { backgroundColor: C.borderStrong },
-  ctaText: { color: C.onBrand, fontSize: 17, fontWeight: "700" },
+  ctaDisabled: { backgroundColor: "rgba(255,255,255,0.15)", shadowOpacity: 0 },
+  ctaText: { color: "#FFFFFF", fontSize: 17, fontWeight: "800" },
   legalFooter: {
     textAlign: "center",
     fontSize: 11,
-    color: C.onSurfaceTertiary,
+    color: "#64748B",
     marginBottom: S.lg,
   },
 });
