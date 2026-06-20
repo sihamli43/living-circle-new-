@@ -640,6 +640,11 @@ async def root():
     return {"app": "Living Circle", "ok": True, "email": EMAIL_ENABLED}
 
 
+@api.get("/api/health")
+async def health():
+    return {"status": "ok", "app": "Living Circle API"}
+
+
 # ---------- Seed ----------
 SEED_NAMES = [
     ("Aarav Sharma", "male", "Hindi,English"),
