@@ -116,8 +116,19 @@ export default function Chat() {
         </Pressable>
       </View>
 
+      {/* Bot banner */}
+      {other?.is_bot && (
+        <View style={styles.botBanner}>
+          <Text style={styles.botBannerEmoji}>🤖</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.botBannerTitle}>Test Bot — All Features Enabled</Text>
+            <Text style={styles.botBannerSub}>Messages are instant auto-replies. Maps, lifestyle & photos work normally.</Text>
+          </View>
+        </View>
+      )}
+
       {/* Safety banner */}
-      {!bannerDismissed && (
+      {!bannerDismissed && !other?.is_bot && (
         <View style={styles.safetyBanner}>
           <Ionicons name="shield-checkmark" size={15} color="#92400E" />
           <Text style={styles.safetyBannerText}>
@@ -216,6 +227,19 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   locationBtnText: { fontSize: 18 },
+  botBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "rgba(106,5,114,0.25)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(168,85,247,0.4)",
+  },
+  botBannerEmoji: { fontSize: 22 },
+  botBannerTitle: { color: "#C084FC", fontWeight: "800", fontSize: 13, letterSpacing: 0.2 },
+  botBannerSub: { color: "rgba(192,132,252,0.7)", fontSize: 11, marginTop: 2 },
   headerName: { fontSize: 16, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.3 },
   localityCtx: { fontSize: 12, color: C.cyan, fontWeight: "600", marginTop: 2 },
   headerSub: { fontSize: 12, color: C.cyan, fontWeight: "600", marginTop: 2 },

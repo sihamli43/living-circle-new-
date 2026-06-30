@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
@@ -243,6 +244,7 @@ function Pill({ text }: { text: string }) {
 }
 
 export default function Discover() {
+  const router = useRouter();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [idx, setIdx] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -252,6 +254,7 @@ export default function Discover() {
   // pendingMatch holds the match data while safety warning is shown.
   const [pendingMatch, setPendingMatch] = useState<any>(null);
   const [showSafetyWarning, setShowSafetyWarning] = useState(false);
+  const [botLoading, setBotLoading] = useState(false);
 
   const load = useCallback(async (f: any = {}) => {
     setLoading(true);
@@ -294,6 +297,23 @@ export default function Discover() {
     },
     []
   );
+
+  const handleTestBot = async () => {
+    if (botLoading) return;
+    setBotLoading(true);
+    try {
+      const res = await api.testBotMatch();
+      if (res?.ok) {
+        setPendingMatch(res.match);
+        setShowSafetyWarning(true);
+      }
+    } catch {
+      // If already matched, just go to matches tab
+      router.push("/(tabs)/matches");
+    } finally {
+      setBotLoading(false);
+    }
+  };
 
   const remaining = profiles.slice(idx, idx + 3).reverse();
 
@@ -370,6 +390,16 @@ export default function Discover() {
             </PressableScale>
           </View>
         )}
+
+        {/* Floating Test Bot button */}
+        <PressableScale
+          testID="test-bot-button"
+          style={styles.botFab}
+          onPress={handleTestBot}
+        >
+          <Text style={styles.botFabEmoji}>{botLoading ? "⏳" : "🤖"}</Text>
+          <Text style={styles.botFabText}>Test Bot</Text>
+        </PressableScale>
       </SafeAreaView>
 
       <MatchSafetyWarning
@@ -609,4 +639,25 @@ const styles = StyleSheet.create({
   },
   cta: { backgroundColor: "#FF006E", paddingVertical: S.lg, borderRadius: R.pill, alignItems: "center" },
   ctaText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
+  botFab: {
+    position: "absolute",
+    bottom: 16,
+    right: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#1A1A2E",
+    borderWidth: 1.5,
+    borderColor: "#00D9FF",
+    borderRadius: 99,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    shadowColor: "#00D9FF",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  botFabEmoji: { fontSize: 16 },
+  botFabText: { color: "#00D9FF", fontWeight: "800", fontSize: 13, letterSpacing: 0.3 },
 });

@@ -131,6 +131,8 @@ class Profile(BaseModel):
     listing: Listing = Field(default_factory=Listing)
     onboarded: bool = False
     can_login: bool = True
+    is_bot: bool = False
+    work_locality: Optional[str] = None
     created_at: str = Field(default_factory=now_iso)
 
 
@@ -152,6 +154,7 @@ class ProfileUpdate(BaseModel):
     lifestyle: Optional[Lifestyle] = None
     listing: Optional[Listing] = None
     onboarded: Optional[bool] = None
+    work_locality: Optional[str] = None
 
 
 class SwipeIn(BaseModel):
@@ -345,6 +348,8 @@ def public_profile(p: dict, viewer: Optional[dict] = None) -> dict:
         "lifestyle": p.get("lifestyle", {}),
         "listing": p.get("listing", {}),
     }
+    if p.get("is_bot"):
+        out["is_bot"] = True
     if viewer:
         out["compatibility"] = compatibility(viewer, p)
         out["shared"] = shared_prefs(viewer, p)
@@ -725,6 +730,49 @@ async def unmatch(match_id: str, authorization: Optional[str] = Header(None)):
     return {"ok": True}
 
 
+# ---------- Test-Bot Match ----------
+BOT_ID = "bot-test-001"
+BOT_REPLIES = [
+    "Hey! So excited we matched 🎉 I'm Alex from Indiranagar!",
+    "Your profile looks amazing! I think we'd be great roommates 🏠",
+    "I'm a huge coffee person too ☕ We'd get along perfectly!",
+    "Have you checked out the neighborhood map? Indiranagar has everything nearby 🗺️",
+    "I usually work from Whitefield — how's your commute?",
+    "Let's set up a time to see the place! It's fully furnished 🛋️",
+    "Sounds great! When are you free to chat? 😊",
+    "I think we'd be totally compatible! Check our lifestyle match 🌟",
+]
+
+
+@api.post("/matches/test-bot")
+async def match_with_bot(authorization: Optional[str] = Header(None)):
+    u = await get_user(authorization)
+    bot = await db.profiles.find_one({"user_id": BOT_ID}, {"_id": 0})
+    if not bot:
+        raise HTTPException(404, "Bot profile not found. Restart the backend to seed it.")
+
+    key = sorted([u["user_id"], BOT_ID])
+    match_id = f"{key[0]}__{key[1]}"
+
+    # Upsert match so button is idempotent
+    existing = await db.matches.find_one({"match_id": match_id}, {"_id": 0})
+    if not existing:
+        await db.matches.insert_one({"match_id": match_id, "users": key, "created_at": now_iso()})
+
+    # Seed a welcome message from the bot if no messages yet
+    msg_count = await db.messages.count_documents({"match_id": match_id})
+    if msg_count == 0:
+        await db.messages.insert_one({
+            "id": str(uuid.uuid4()),
+            "match_id": match_id,
+            "sender_id": BOT_ID,
+            "text": "Hey! So excited we matched 🎉 I'm Alex, your test bot. Chat with me to explore all the features!",
+            "at": now_iso(),
+        })
+
+    return {"ok": True, "match_id": match_id, "match": {"match_id": match_id, "user": public_profile(bot, u)}}
+
+
 # ---------- Messages ----------
 @api.get("/messages/{match_id}")
 async def get_messages(match_id: str, authorization: Optional[str] = Header(None)):
@@ -748,6 +796,19 @@ async def send_message(match_id: str, body: MessageIn, authorization: Optional[s
     doc = {"id": str(uuid.uuid4()), "match_id": match_id, "sender_id": u["user_id"], "text": text, "at": now_iso()}
     await db.messages.insert_one(doc)
     doc.pop("_id", None)
+
+    # Auto-reply if matched with the test bot
+    if BOT_ID in m["users"] and u["user_id"] != BOT_ID:
+        reply_text = random.choice(BOT_REPLIES)
+        reply_doc = {
+            "id": str(uuid.uuid4()),
+            "match_id": match_id,
+            "sender_id": BOT_ID,
+            "text": reply_text,
+            "at": now_iso(),
+        }
+        await db.messages.insert_one(reply_doc)
+
     return doc
 
 
@@ -983,6 +1044,55 @@ async def seed_if_empty():
             listing=Listing(),
             onboarded=True,
             can_login=False,
+        ).model_dump(),
+
+        # BOT — instant-match test profile.
+        Profile(
+            user_id="bot-test-001",
+            email="bot@livingcircle.app",
+            name="Alex (Test Bot)",
+            age=28,
+            gender="other",
+            photo=_placeholder("🤖", "#6A0572"),
+            bio="🤖 I'm a test bot! Match with me to explore all features — maps, chat, lifestyle compatibility, room photos, and more.",
+            occupation="professional",
+            org="Living Circle HQ",
+            hometown="Bangalore",
+            languages=["English", "Hindi", "Kannada"],
+            budget_min=15000,
+            budget_max=30000,
+            localities=["Indiranagar"],
+            move_in="2026-08-01",
+            listing_type="has_place",
+            work_locality="Whitefield",
+            lifestyle=Lifestyle(
+                food="Veg", smoking="No", drinking="Occasionally",
+                sleep="Night owl", cleanliness="Very tidy",
+                guests="Sometimes", pets="Yes - Cat",
+                religion="Any",
+                work_timing="9-5 (day shift)", cooking="Yes",
+                noise="Depends on time of day",
+                relationship_status="Single",
+                overnight_guests="With notice",
+                sharing_habits="Open to sharing",
+            ),
+            listing=Listing(
+                rent=22000, deposit=44000, maintenance=1500,
+                furnished="Fully-furnished",
+                amenities=["Lift", "Parking", "WiFi", "Gym", "Swimming pool", "Power backup"],
+                property_type="Apartment",
+                posted_by="Tenant",
+                photos=[
+                    ListingPhoto(label="Kitchen", photo=_placeholder("🍳 Kitchen", "#F59E0B")),
+                    ListingPhoto(label="Bedroom/Room", photo=_placeholder("🛏️ Bedroom", "#6A0572")),
+                    ListingPhoto(label="Bathroom", photo=_placeholder("🚿 Bathroom", "#0891B2")),
+                    ListingPhoto(label="Hall/Living area", photo=_placeholder("🛋️ Hall", "#059669")),
+                ],
+                description="Spacious 2BHK in the heart of Indiranagar. Walking distance to 100 Feet Road, metro, cafes, and supermarkets. Great vibes, friendly society.",
+            ),
+            onboarded=True,
+            can_login=False,
+            is_bot=True,
         ).model_dump(),
     ]
 
