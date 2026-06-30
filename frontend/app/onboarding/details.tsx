@@ -19,6 +19,7 @@ export default function Details() {
   const [moveIn, setMoveIn] = useState("");
   const [listingType, setListingType] = useState<"has_place" | "looking" | null>(null);
   const [bio, setBio] = useState("");
+  const [workLocality, setWorkLocality] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState<null | "locality" | "movein">(null);
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export default function Details() {
       if (m.move_in) setMoveIn(m.move_in);
       if (m.listing_type) setListingType(m.listing_type);
       if (m.bio) setBio(m.bio);
+      if (m.work_locality) setWorkLocality(m.work_locality);
     }).catch(() => {});
   }, []);
 
@@ -61,6 +63,7 @@ export default function Details() {
       move_in: moveIn,
       listing_type: listingType,
       bio: bio.trim() || null,
+      work_locality: workLocality || null,
     });
     router.push("/onboarding/lifestyle");
   };
@@ -171,6 +174,24 @@ export default function Details() {
       />
       <Text style={styles.charCount}>{bio.length}/400</Text>
 
+      <Text style={styles.label}>
+        Where do you work? <Text style={styles.optional}>(optional)</Text>
+      </Text>
+      <Text style={styles.workHint}>
+        🗺️ Used to show commute distance in Location Explorer after matching
+      </Text>
+      <ChipRow>
+        {ACTIVE_LOCALITIES.map((l) => (
+          <Chip
+            key={l}
+            label={l}
+            active={workLocality === l}
+            onPress={() => setWorkLocality((p) => (p === l ? null : l))}
+            testID={`workloc-${l}`}
+          />
+        ))}
+      </ChipRow>
+
       <MonthYearPicker
         testID="movein-modal"
         visible={pickerOpen === "movein"}
@@ -220,4 +241,5 @@ const styles = StyleSheet.create({
   bigTitle: { fontSize: 16, fontWeight: "700", color: C.onSurface },
   bigSub: { fontSize: 13, color: C.onSurfaceSecondary, marginTop: 4 },
   charCount: { fontSize: 11, color: C.onSurfaceTertiary, textAlign: "right", marginTop: 4 },
+  workHint: { fontSize: 12, color: C.cyan, fontWeight: "600", marginBottom: S.sm, lineHeight: 17 },
 });

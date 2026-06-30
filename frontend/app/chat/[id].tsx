@@ -104,6 +104,13 @@ export default function Chat() {
             </Text>
           )}
         </View>
+        <Pressable
+          onPress={() => router.push(`/location/${id}`)}
+          testID="chat-location"
+          style={styles.locationBtn}
+        >
+          <Text style={styles.locationBtnText}>📍</Text>
+        </Pressable>
         <Pressable onPress={() => setShowMenu(true)} testID="chat-menu">
           <Ionicons name="ellipsis-vertical" size={22} color={C.onSurface} />
         </Pressable>
@@ -197,6 +204,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: "rgba(0,217,255,0.2)",
     backgroundColor: "#0F0F1E",
   },
+  locationBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(0,217,255,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(0,217,255,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 4,
+  },
+  locationBtnText: { fontSize: 18 },
   headerName: { fontSize: 16, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.3 },
   localityCtx: { fontSize: 12, color: C.cyan, fontWeight: "600", marginTop: 2 },
   headerSub: { fontSize: 12, color: C.cyan, fontWeight: "600", marginTop: 2 },

@@ -6,6 +6,7 @@ Photos as base64. All routes prefixed with /api.
 from __future__ import annotations
 
 import logging
+import math
 import os
 import random
 import re
@@ -499,6 +500,161 @@ CITY_LOCALITIES: Dict[str, List[str]] = {
 }
 CITIES = ["Bangalore"]
 
+# ---------- Location Helpers ----------
+LOCALITY_COORDS: Dict[str, tuple] = {
+    "Koramangala":    (12.9352, 77.6245),
+    "Indiranagar":    (12.9784, 77.6408),
+    "HSR Layout":     (12.9116, 77.6389),
+    "Whitefield":     (12.9698, 77.7499),
+    "BTM Layout":     (12.9166, 77.6101),
+    "Marathahalli":   (12.9591, 77.6972),
+    "Jayanagar":      (12.9254, 77.5938),
+    "Electronic City":(12.8399, 77.6770),
+    "Viman Nagar":    (12.9898, 77.6272),
+    "Sarjapur Road":  (12.9010, 77.6859),
+}
+
+AMENITY_TYPES = {
+    "railway:station":      "metro",
+    "highway:bus_stop":     "bus",
+    "amenity:pharmacy":     "medical",
+    "shop:supermarket":     "supermarket",
+    "amenity:restaurant":   "restaurant",
+    "leisure:fitness_centre":"gym",
+    "amenity:school":       "school",
+    "amenity:college":      "school",
+    "amenity:university":   "school",
+    "amenity:hospital":     "hospital",
+}
+
+
+def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng / 2) ** 2
+    return R * 2 * math.asin(math.sqrt(a))
+
+
+async def fetch_nearby_amenities(lat: float, lng: float, radius: int = 1500) -> List[dict]:
+    query = f"""
+[out:json][timeout:25];
+(
+  node["railway"="station"](around:{radius},{lat},{lng});
+  node["highway"="bus_stop"](around:{radius},{lat},{lng});
+  node["amenity"="pharmacy"](around:{radius},{lat},{lng});
+  node["shop"="supermarket"](around:{radius},{lat},{lng});
+  node["amenity"="restaurant"](around:{radius},{lat},{lng});
+  node["leisure"="fitness_centre"](around:{radius},{lat},{lng});
+  node["amenity"="school"](around:{radius},{lat},{lng});
+  node["amenity"="college"](around:{radius},{lat},{lng});
+  node["amenity"="hospital"](around:{radius},{lat},{lng});
+);
+out body;
+"""
+    try:
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as cx:
+            r = await cx.post("https://overpass-api.de/api/interpreter", data={"data": query})
+            if r.status_code != 200:
+                return []
+            data = r.json()
+    except Exception as e:
+        log.warning("Overpass API error: %s", e)
+        return []
+
+    amenities: List[dict] = []
+    seen_names: set = set()
+    for el in data.get("elements", []):
+        tags = el.get("tags", {})
+        name = tags.get("name", "").strip()
+        if not name or name in seen_names:
+            continue
+        el_lat = el.get("lat", lat)
+        el_lng = el.get("lon", lng)
+        dist = haversine_km(lat, lng, el_lat, el_lng)
+
+        atype = None
+        for tag_combo, typ in AMENITY_TYPES.items():
+            key, val = tag_combo.split(":", 1)
+            if tags.get(key) == val:
+                atype = typ
+                break
+        if not atype:
+            continue
+
+        seen_names.add(name)
+        amenities.append({
+            "type": atype,
+            "name": name,
+            "distance_km": round(dist, 2),
+            "walk_min": max(1, round(dist * 12)),
+            "lat": round(el_lat, 6),
+            "lng": round(el_lng, 6),
+        })
+
+    amenities.sort(key=lambda x: x["distance_km"])
+    return amenities[:25]
+
+
+@api.get("/matches/{match_id}/location")
+async def match_location(match_id: str, authorization: Optional[str] = Header(None)):
+    u = await get_user(authorization)
+    m = await db.matches.find_one({"match_id": match_id}, {"_id": 0})
+    if not m or u["user_id"] not in m["users"]:
+        raise HTTPException(404, "Match not found")
+
+    other_id = next(uid for uid in m["users"] if uid != u["user_id"])
+    other = await db.profiles.find_one({"user_id": other_id}, {"_id": 0})
+    if not other:
+        raise HTTPException(404, "Profile not found")
+
+    other_localities = other.get("localities", [])
+    my_localities = u.get("localities", [])
+
+    other_loc = next((LOCALITY_COORDS[l] for l in other_localities if l in LOCALITY_COORDS), None)
+    my_loc = next((LOCALITY_COORDS[l] for l in my_localities if l in LOCALITY_COORDS), None)
+
+    if not other_loc:
+        raise HTTPException(400, "Match location unavailable")
+
+    distance_km: Optional[float] = None
+    if my_loc:
+        distance_km = round(haversine_km(my_loc[0], my_loc[1], other_loc[0], other_loc[1]), 1)
+
+    # Work commute distance
+    work_distance_km: Optional[float] = None
+    work_locality = u.get("work_locality")
+    if work_locality and work_locality in LOCALITY_COORDS:
+        wloc = LOCALITY_COORDS[work_locality]
+        work_distance_km = round(haversine_km(other_loc[0], other_loc[1], wloc[0], wloc[1]), 1)
+
+    # Nearby amenities (cached in DB for 24h)
+    cache_key = f"amenities_{other_loc[0]:.4f}_{other_loc[1]:.4f}"
+    cached = await db.location_cache.find_one({"key": cache_key}, {"_id": 0})
+    if cached and cached.get("amenities") is not None:
+        amenities = cached["amenities"]
+    else:
+        amenities = await fetch_nearby_amenities(other_loc[0], other_loc[1])
+        await db.location_cache.replace_one(
+            {"key": cache_key},
+            {"key": cache_key, "amenities": amenities, "at": now_iso()},
+            upsert=True,
+        )
+
+    return {
+        "match_name": other.get("name", ""),
+        "match_locality": other_localities[0] if other_localities else None,
+        "match_lat": other_loc[0],
+        "match_lng": other_loc[1],
+        "my_locality": my_localities[0] if my_localities else None,
+        "my_lat": my_loc[0] if my_loc else None,
+        "my_lng": my_loc[1] if my_loc else None,
+        "distance_km": distance_km,
+        "work_locality": work_locality,
+        "work_distance_km": work_distance_km,
+        "amenities": amenities,
+    }
+
 
 @api.get("/meta/cities")
 async def get_cities():
@@ -853,6 +1009,7 @@ async def startup():
     await db.otp_codes.create_index("expires_at", expireAfterSeconds=0)
     await db.safety_reports.create_index([("reported_user_id", 1), ("at", -1)])
     await db.safety_reports.create_index("reporter_id")
+    await db.location_cache.create_index("key", unique=True)
     await seed_if_empty()
     log.info("Backend ready. Email %s.", "ENABLED (Brevo)" if EMAIL_ENABLED else "DISABLED (dev mode)")
     # Verify weights sum to 100 (development invariant).

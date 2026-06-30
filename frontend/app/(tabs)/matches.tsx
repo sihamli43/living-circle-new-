@@ -143,7 +143,15 @@ export default function Matches() {
                   style={[styles.actionBtn, styles.viewBtn]}
                 >
                   <Ionicons name="person-outline" size={14} color={C.cyan} />
-                  <Text style={styles.viewBtnText}>View profile</Text>
+                  <Text style={styles.viewBtnText}>Profile</Text>
+                </PressableScale>
+                <PressableScale
+                  testID={`location-${item.match_id}`}
+                  onPress={() => router.push(`/location/${item.match_id}`)}
+                  style={[styles.actionBtn, styles.mapBtn]}
+                >
+                  <Text style={{ fontSize: 13 }}>📍</Text>
+                  <Text style={styles.mapBtnText}>Map</Text>
                 </PressableScale>
                 <PressableScale
                   testID={`chat-${item.match_id}`}
@@ -366,6 +374,8 @@ const styles = StyleSheet.create({
   },
   viewBtn: { borderColor: C.borderCyan, backgroundColor: "rgba(0,217,255,0.07)" },
   viewBtnText: { color: C.cyan, fontWeight: "700", fontSize: 13 },
+  mapBtn: { borderColor: "rgba(168,85,247,0.5)", backgroundColor: "rgba(168,85,247,0.12)" },
+  mapBtnText: { color: "#A855F7", fontWeight: "700", fontSize: 13 },
   chatBtn: { borderColor: "#FF006E", backgroundColor: "#FF006E" },
   chatBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
   empty: { textAlign: "center", color: C.onSurfaceTertiary, marginTop: 40 },

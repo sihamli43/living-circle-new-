@@ -71,4 +71,5 @@ export const api = {
   safetyReport: (id: string, reason: string, details?: string) =>
     request(`/users/${id}/safety-report`, { method: "POST", body: { reason, details } }),
   unmatch: (matchId: string) => request(`/matches/${matchId}`, { method: "DELETE" }),
+  matchLocation: (matchId: string) => request<any>(`/matches/${matchId}/location`),
 };
