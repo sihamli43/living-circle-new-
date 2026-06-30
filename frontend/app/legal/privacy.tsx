@@ -155,7 +155,7 @@ function AccordionSection({ section }: { section: Section }) {
         <Ionicons
           name={open ? "chevron-up" : "chevron-down"}
           size={18}
-          color={C.brand}
+          color={C.cyan}
         />
       </Pressable>
       {open && (
@@ -175,7 +175,7 @@ export default function PrivacyScreen() {
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} hitSlop={8} testID="legal-back">
-          <Ionicons name="arrow-back" size={24} color={C.brand} />
+          <Ionicons name="arrow-back" size={24} color={C.onSurface} />
         </Pressable>
         <Text style={styles.headerTitle}>Privacy Policy</Text>
         <View style={{ width: 24 }} />
@@ -213,43 +213,44 @@ export default function PrivacyScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.surface },
+  safe: { flex: 1, backgroundColor: C.bg },
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: S.lg, paddingVertical: S.md,
-    borderBottomWidth: 1, borderBottomColor: C.border,
+    backgroundColor: C.surfaceSecondary,
+    borderBottomWidth: 1, borderBottomColor: C.borderCyan,
   },
   headerTitle: { fontSize: 16, fontWeight: "700", color: C.onSurface },
   content: { padding: S.xl, paddingBottom: S.xxxl },
   heroBanner: {
-    backgroundColor: C.brandTint, borderRadius: R.md,
+    backgroundColor: C.surfaceSecondary, borderRadius: R.md,
     padding: S.xl, marginBottom: S.lg,
-    borderWidth: 1, borderColor: C.border,
+    borderWidth: 1, borderColor: C.borderCyan,
   },
-  heroTitle: { fontSize: 22, fontWeight: "800", color: C.brand, marginBottom: S.sm },
-  heroSub: { fontSize: 13, color: C.onBrandTint, marginTop: 2 },
+  heroTitle: { fontSize: 22, fontWeight: "800", color: C.cyan, marginBottom: S.sm },
+  heroSub: { fontSize: 13, color: C.onSurfaceSecondary, marginTop: 2 },
   noticeBanner: {
     flexDirection: "row", gap: S.sm, alignItems: "flex-start",
-    backgroundColor: "#ECFDF5", borderRadius: R.md, padding: S.md,
-    borderWidth: 1, borderColor: "#6EE7B7", marginBottom: S.lg,
+    backgroundColor: "rgba(0,245,160,0.08)", borderRadius: R.md, padding: S.md,
+    borderWidth: 1, borderColor: "rgba(0,245,160,0.3)", marginBottom: S.lg,
   },
-  noticeText: { flex: 1, fontSize: 13, color: "#065F46", lineHeight: 18 },
+  noticeText: { flex: 1, fontSize: 13, color: "#00F5A0", lineHeight: 18 },
   section: {
     borderRadius: R.md, borderWidth: 1, borderColor: C.border,
-    backgroundColor: C.surface, marginBottom: S.md, overflow: "hidden",
+    backgroundColor: C.surfaceSecondary, marginBottom: S.md, overflow: "hidden",
   },
   sectionHeader: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     padding: S.lg,
   },
-  sectionTitle: { flex: 1, fontSize: 15, fontWeight: "700", color: C.brand, paddingRight: S.sm },
+  sectionTitle: { flex: 1, fontSize: 15, fontWeight: "700", color: C.cyan, paddingRight: S.sm },
   sectionBody: {
     paddingHorizontal: S.lg, paddingBottom: S.lg,
     borderTopWidth: 1, borderTopColor: C.border,
-    backgroundColor: C.surfaceSecondary,
+    backgroundColor: C.surfaceTertiary,
   },
   para: { fontSize: 14, color: C.onSurfaceSecondary, lineHeight: 22, marginTop: S.sm },
   footer: { alignItems: "center", marginTop: S.xl, gap: S.sm },
   footerText: { fontSize: 12, color: C.onSurfaceTertiary },
-  footerLink: { fontSize: 12, color: C.brand, fontWeight: "600", textDecorationLine: "underline" },
+  footerLink: { fontSize: 12, color: C.cyan, fontWeight: "600", textDecorationLine: "underline" },
 });
