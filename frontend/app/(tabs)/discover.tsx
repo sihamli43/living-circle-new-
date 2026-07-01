@@ -41,10 +41,7 @@ type Profile = any;
 
 function isBangaloreProfile(p: Profile) {
   const locs: string[] = p.localities || [];
-  return (
-    p.hometown === ACTIVE_CITY &&
-    locs.some((l) => ACTIVE_LOCALITIES.includes(l))
-  );
+  return locs.some((l) => ACTIVE_LOCALITIES.includes(l));
 }
 
 function Card({
@@ -204,7 +201,7 @@ function Card({
                 {p.occupation === "student" ? "Student" : "Professional"}{p.org ? ` · ${p.org}` : ""}
               </Text>
               <Text style={styles.meta} numberOfLines={1}>
-                {p.hometown ? `From ${p.hometown}` : ""}
+                {p.city && p.state ? `🏙️ ${p.city}, ${p.state}` : p.city || p.state ? `🏙️ ${p.city || p.state}` : ""}
                 {p.budget_min && p.budget_max ? ` · ₹${p.budget_min.toLocaleString()}–${p.budget_max.toLocaleString()}` : ""}
               </Text>
               {p.localities?.length ? (

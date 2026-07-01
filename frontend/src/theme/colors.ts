@@ -2,16 +2,28 @@
 // Palette: Futuristic dark — deep space backgrounds, neon cyan + coral accents.
 export const ACTIVE_CITY = "Bangalore";
 export const ACTIVE_LOCALITIES = [
-  "Koramangala",
-  "Indiranagar",
-  "HSR Layout",
-  "Whitefield",
-  "BTM Layout",
-  "Marathahalli",
-  "Jayanagar",
-  "Electronic City",
-  "Viman Nagar",
-  "Sarjapur Road",
+  // Central / Inner ring
+  "MG Road", "Residency Road", "Richmond Town", "Lavelle Road",
+  "Shivajinagar", "Cubbon Park", "Ulsoor", "Frazer Town", "Cox Town",
+  "Cunningham Road", "Cleveland Town",
+  // South Bangalore
+  "Koramangala", "Indiranagar", "Domlur", "Ejipura", "HAL Layout",
+  "HSR Layout", "BTM Layout", "Jayanagar", "JP Nagar", "Banashankari",
+  "Basavanagudi", "Padmanabhanagar", "Kanakapura Road",
+  "Bannerghatta Road", "Electronic City", "Hosa Road",
+  // North Bangalore
+  "Hebbal", "Yelahanka", "Banaswadi", "RT Nagar", "HBR Layout",
+  "Kalyan Nagar", "New BEL Road", "Vidyaranyapura", "Peenya",
+  "Sahakara Nagar", "Nagavara", "Thanisandra",
+  // West Bangalore
+  "Rajajinagar", "Malleswaram", "Basaveshwara Nagar", "Nagarbhavi",
+  "Kengeri", "Mysore Road", "Tumkur Road",
+  // East / Outer ring
+  "Whitefield", "Marathahalli", "Sarjapur Road", "Bellandur",
+  "Old Airport Road", "Viman Nagar", "KR Puram", "Mahadevapura",
+  "Brookefield", "ITPL Road", "Kadubeesanahalli",
+  // Tech corridors
+  "Outer Ring Road", "Silk Board", "Devanahalli",
 ];
 
 export const C = {

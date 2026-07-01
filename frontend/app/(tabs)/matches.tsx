@@ -227,7 +227,7 @@ function ProfileModal({ user, onClose }: { user: any | null; onClose: () => void
             ) : null}
 
             <Section title="The basics">
-              <Row icon="location-outline" label="From" value={user.hometown} />
+              <Row icon="location-outline" label="Hometown" value={user.city && user.state ? `${user.city}, ${user.state}` : user.city || user.state || user.hometown} />
               <Row icon="home-outline" label="Looking" value={user.listing_type === "has_place" ? "Has a place" : "Looking for a place"} />
               <Row icon="cash-outline" label="Budget" value={`₹${user.budget_min?.toLocaleString()}–${user.budget_max?.toLocaleString()}`} />
               <Row icon="navigate-outline" label="Localities" value={(user.localities || []).join(", ")} />

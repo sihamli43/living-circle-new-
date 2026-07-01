@@ -129,6 +129,8 @@ class Profile(BaseModel):
     listing_type: Optional[str] = None
     lifestyle: Lifestyle = Field(default_factory=Lifestyle)
     listing: Listing = Field(default_factory=Listing)
+    state: Optional[str] = None      # e.g. "Karnataka"
+    city: Optional[str] = None        # e.g. "Bangalore"
     onboarded: bool = False
     can_login: bool = True
     is_bot: bool = False
@@ -155,6 +157,8 @@ class ProfileUpdate(BaseModel):
     listing: Optional[Listing] = None
     onboarded: Optional[bool] = None
     work_locality: Optional[str] = None
+    state: Optional[str] = None
+    city: Optional[str] = None
 
 
 class SwipeIn(BaseModel):
@@ -319,6 +323,11 @@ def shared_prefs(a: dict, b: dict) -> List[str]:
         va, vb = la.get(k), lb.get(k)
         if _eligible(k, va, vb) and va == vb:
             out.append(f"Same {lbl}: {va}")
+    # Same hometown city
+    if a.get("city") and a.get("city") == b.get("city"):
+        out.append(f"Same hometown: {a['city']}")
+    elif a.get("state") and a.get("state") == b.get("state"):
+        out.append(f"Same home state: {a['state']}")
     overlap = set(a.get("localities", [])) & set(b.get("localities", []))
     if overlap:
         out.append(f"Loves {', '.join(list(overlap)[:2])}")
@@ -338,7 +347,8 @@ def public_profile(p: dict, viewer: Optional[dict] = None) -> dict:
         "bio": p.get("bio"),
         "occupation": p.get("occupation"),
         "org": p.get("org"),
-        "hometown": p.get("hometown"),
+        "state": p.get("state"),
+        "city": p.get("city"),
         "languages": p.get("languages", []),
         "budget_min": p.get("budget_min"),
         "budget_max": p.get("budget_max"),
@@ -464,7 +474,6 @@ async def discover(
     q: dict = {
         "onboarded": True,
         "user_id": {"$nin": list(exclude)},
-        "hometown": "Bangalore",
     }
     if locality:
         q["localities"] = {"$regex": locality, "$options": "i"}
@@ -499,24 +508,100 @@ async def profile_by_id(user_id: str, authorization: Optional[str] = Header(None
 # ---------- Cities / Localities ----------
 CITY_LOCALITIES: Dict[str, List[str]] = {
     "Bangalore": [
-        "Koramangala", "Indiranagar", "HSR Layout", "Whitefield", "BTM Layout",
-        "Marathahalli", "Jayanagar", "Electronic City", "Viman Nagar", "Sarjapur Road",
+        # Central / Inner ring
+        "MG Road", "Residency Road", "Richmond Town", "Lavelle Road",
+        "Shivajinagar", "Cubbon Park", "Ulsoor", "Frazer Town", "Cox Town",
+        "Cunningham Road", "Cleveland Town",
+        # South Bangalore
+        "Koramangala", "Indiranagar", "Domlur", "Ejipura", "HAL Layout",
+        "HSR Layout", "BTM Layout", "Jayanagar", "JP Nagar", "Banashankari",
+        "Basavanagudi", "Padmanabhanagar", "Kanakapura Road",
+        "Bannerghatta Road", "Electronic City", "Hosa Road",
+        # North Bangalore
+        "Hebbal", "Yelahanka", "Banaswadi", "RT Nagar", "HBR Layout",
+        "Kalyan Nagar", "New BEL Road", "Vidyaranyapura", "Peenya",
+        "Sahakara Nagar", "Nagavara", "Thanisandra",
+        # West Bangalore
+        "Rajajinagar", "Malleswaram", "Basaveshwara Nagar", "Nagarbhavi",
+        "Kengeri", "Mysore Road", "Tumkur Road",
+        # East / Outer ring
+        "Whitefield", "Marathahalli", "Sarjapur Road", "Bellandur",
+        "Old Airport Road", "Viman Nagar", "KR Puram", "Mahadevapura",
+        "Brookefield", "ITPL Road", "Kadubeesanahalli",
+        # Tech corridors
+        "Outer Ring Road", "Silk Board", "Devanahalli",
     ],
 }
 CITIES = ["Bangalore"]
 
 # ---------- Location Helpers ----------
 LOCALITY_COORDS: Dict[str, tuple] = {
-    "Koramangala":    (12.9352, 77.6245),
-    "Indiranagar":    (12.9784, 77.6408),
-    "HSR Layout":     (12.9116, 77.6389),
-    "Whitefield":     (12.9698, 77.7499),
-    "BTM Layout":     (12.9166, 77.6101),
-    "Marathahalli":   (12.9591, 77.6972),
-    "Jayanagar":      (12.9254, 77.5938),
-    "Electronic City":(12.8399, 77.6770),
-    "Viman Nagar":    (12.9898, 77.6272),
-    "Sarjapur Road":  (12.9010, 77.6859),
+    # Central
+    "MG Road":            (12.9762, 77.6033),
+    "Residency Road":     (12.9716, 77.5989),
+    "Richmond Town":      (12.9634, 77.5987),
+    "Lavelle Road":       (12.9699, 77.5967),
+    "Shivajinagar":       (12.9850, 77.5997),
+    "Cubbon Park":        (12.9768, 77.5932),
+    "Ulsoor":             (12.9810, 77.6192),
+    "Frazer Town":        (12.9914, 77.6208),
+    "Cox Town":           (12.9929, 77.6098),
+    "Cunningham Road":    (12.9927, 77.5855),
+    "Cleveland Town":     (12.9896, 77.6149),
+    # South
+    "Koramangala":        (12.9352, 77.6245),
+    "Indiranagar":        (12.9784, 77.6408),
+    "Domlur":             (12.9609, 77.6390),
+    "Ejipura":            (12.9457, 77.6232),
+    "HAL Layout":         (12.9632, 77.6527),
+    "HSR Layout":         (12.9116, 77.6389),
+    "BTM Layout":         (12.9166, 77.6101),
+    "Jayanagar":          (12.9254, 77.5938),
+    "JP Nagar":           (12.9063, 77.5857),
+    "Banashankari":       (12.9244, 77.5460),
+    "Basavanagudi":       (12.9422, 77.5749),
+    "Padmanabhanagar":    (12.9139, 77.5639),
+    "Kanakapura Road":    (12.8940, 77.5720),
+    "Bannerghatta Road":  (12.8954, 77.5979),
+    "Electronic City":    (12.8399, 77.6770),
+    "Hosa Road":          (12.8686, 77.6759),
+    # North
+    "Hebbal":             (13.0350, 77.5970),
+    "Yelahanka":          (13.1006, 77.5963),
+    "Banaswadi":          (13.0089, 77.6459),
+    "RT Nagar":           (13.0218, 77.5968),
+    "HBR Layout":         (13.0174, 77.6398),
+    "Kalyan Nagar":       (13.0195, 77.6458),
+    "New BEL Road":       (13.0198, 77.5527),
+    "Vidyaranyapura":     (13.0759, 77.5569),
+    "Peenya":             (13.0278, 77.5194),
+    "Sahakara Nagar":     (13.0564, 77.5884),
+    "Nagavara":           (13.0386, 77.6215),
+    "Thanisandra":        (13.0576, 77.6349),
+    # West
+    "Rajajinagar":        (12.9990, 77.5546),
+    "Malleswaram":        (13.0035, 77.5697),
+    "Basaveshwara Nagar": (12.9955, 77.5448),
+    "Nagarbhavi":         (12.9671, 77.5107),
+    "Kengeri":            (12.9068, 77.4849),
+    "Mysore Road":        (12.9439, 77.5265),
+    "Tumkur Road":        (13.0330, 77.5068),
+    # East / Outer ring
+    "Whitefield":         (12.9698, 77.7499),
+    "Marathahalli":       (12.9591, 77.6972),
+    "Sarjapur Road":      (12.9010, 77.6859),
+    "Bellandur":          (12.9253, 77.6785),
+    "Old Airport Road":   (12.9572, 77.6547),
+    "Viman Nagar":        (12.9898, 77.6272),
+    "KR Puram":           (13.0087, 77.6903),
+    "Mahadevapura":       (12.9954, 77.7064),
+    "Brookefield":        (12.9729, 77.7197),
+    "ITPL Road":          (12.9855, 77.7267),
+    "Kadubeesanahalli":   (12.9386, 77.6967),
+    # Tech corridors
+    "Outer Ring Road":    (12.9253, 77.6770),
+    "Silk Board":         (12.9170, 77.6226),
+    "Devanahalli":        (13.2488, 77.7145),
 }
 
 AMENITY_TYPES = {
