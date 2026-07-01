@@ -7,14 +7,12 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-
 import { api } from "@/src/api/client";
-import { C, GLOW_CYAN, R } from "@/src/theme/colors";
+import { C, R, S } from "@/src/theme/colors";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -22,6 +20,8 @@ interface Amenity {
   type: string;
   name: string;
   distance_km: number;
+  drive_min: number;
+  transit_min: number;
   walk_min: number;
   lat: number;
   lng: number;
@@ -36,15 +36,23 @@ interface LocationData {
   my_lat: number | null;
   my_lng: number | null;
   distance_km: number | null;
-  work_locality: string | null;
+  drive_min: number | null;
+  transit_min: number | null;
+  walk_min: number | null;
+  work_location: string | null;
+  work_lat: number | null;
+  work_lng: number | null;
   work_distance_km: number | null;
+  work_drive_min: number | null;
+  work_transit_min: number | null;
+  work_walk_min: number | null;
   amenities: Amenity[];
 }
 
 // ── Amenity config ────────────────────────────────────────────────────────────
 
-const AMENITY_CONFIG: Record<string, { emoji: string; label: string; color: string }> = {
-  metro:       { emoji: "🏢", label: "Metro",       color: "#A855F7" },
+const AMENITY_CFG: Record<string, { emoji: string; label: string; color: string }> = {
+  metro:       { emoji: "🚇", label: "Metro",       color: "#A855F7" },
   bus:         { emoji: "🚌", label: "Bus Stop",    color: "#F97316" },
   medical:     { emoji: "💊", label: "Pharmacy",    color: "#EF4444" },
   supermarket: { emoji: "🛒", label: "Supermarket", color: "#22C55E" },
@@ -56,117 +64,199 @@ const AMENITY_CONFIG: Record<string, { emoji: string; label: string; color: stri
 
 const AMENITY_ORDER = ["metro", "bus", "medical", "supermarket", "restaurant", "gym", "school", "hospital"];
 
-// ── Map Component (Web only) ──────────────────────────────────────────────────
+// ── Leaflet map HTML ──────────────────────────────────────────────────────────
 
-function MapEmbed({ lat, lng, name }: { lat: number; lng: number; name: string }) {
+function buildLeafletHtml(data: LocationData, activeAmenity: Amenity | null): string {
+  const center = [data.match_lat, data.match_lng];
+
+  const amenityMarkersJs = data.amenities.slice(0, 20).map((a) => {
+    const cfg = AMENITY_CFG[a.type] ?? { emoji: "📍", color: "#00D9FF" };
+    const isActive = activeAmenity?.name === a.name;
+    const glow = isActive ? `box-shadow:0 0 24px ${cfg.color},0 0 48px ${cfg.color}88;border:3px solid white;` : `box-shadow:0 0 12px ${cfg.color}88;`;
+    const size = isActive ? 44 : 34;
+    const icon = `L.divIcon({
+      html: '<div style="width:${size}px;height:${size}px;border-radius:50%;background:${cfg.color};display:flex;align-items:center;justify-content:center;font-size:${isActive ? 20 : 16}px;${glow}">${cfg.emoji}</div>',
+      iconSize:[${size},${size}],iconAnchor:[${size / 2},${size / 2}],className:''
+    })`;
+    return `L.marker([${a.lat},${a.lng}],{icon:${icon}}).addTo(map).bindPopup("<b>${a.name}</b><br>${a.distance_km} km · 🚗${a.drive_min}m 🚶${a.walk_min}m");`;
+  }).join("\n");
+
+  const routeJs = data.my_lat && data.my_lng ? `
+    L.polyline([[${data.my_lat},${data.my_lng}],[${data.match_lat},${data.match_lng}]],{
+      color:'#00D9FF',weight:2.5,opacity:0.8,dashArray:'8,6'
+    }).addTo(map);
+  ` : "";
+
+  const activeRouteJs = activeAmenity ? `
+    L.polyline([[${data.match_lat},${data.match_lng}],[${activeAmenity.lat},${activeAmenity.lng}]],{
+      color:'#FF006E',weight:2.5,opacity:0.9,dashArray:'6,4'
+    }).addTo(map);
+  ` : "";
+
+  const workMarkerJs = data.work_lat && data.work_lng ? `
+    L.marker([${data.work_lat},${data.work_lng}],{icon:L.divIcon({
+      html:'<div style="width:38px;height:38px;border-radius:50%;background:#F59E0B;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 14px #F59E0BAA;border:2px solid white;">💼</div>',
+      iconSize:[38,38],iconAnchor:[19,19],className:''
+    })}).addTo(map).bindPopup("<b>Your Work</b><br>${data.work_location ?? 'Work location'}");
+  ` : "";
+
+  const myMarkerJs = data.my_lat && data.my_lng ? `
+    L.marker([${data.my_lat},${data.my_lng}],{icon:L.divIcon({
+      html:'<div style="width:40px;height:40px;border-radius:50%;background:#00D9FF;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 18px #00D9FFAA,0 0 32px #00D9FF44;border:2px solid white;">🏠</div>',
+      iconSize:[40,40],iconAnchor:[20,20],className:''
+    })}).addTo(map).bindPopup("<b>Your Area</b><br>${data.my_locality ?? ''}");
+  ` : "";
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#0F0F1E}
+  #map{width:100%;height:100vh}
+  .leaflet-control-attribution{display:none}
+  .leaflet-popup-content-wrapper{background:#1A1A2E;color:#fff;border:1px solid rgba(0,217,255,.4);border-radius:12px}
+  .leaflet-popup-tip{background:#1A1A2E}
+  .leaflet-popup-content{color:#fff;font-family:system-ui,sans-serif}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+var map=L.map('map',{center:[${center[0]},${center[1]}],zoom:14,zoomControl:true});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:20}).addTo(map);
+
+// Match location marker (coral)
+L.marker([${data.match_lat},${data.match_lng}],{icon:L.divIcon({
+  html:'<div style="width:44px;height:44px;border-radius:50%;background:#FF006E;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 20px #FF006EAA,0 0 40px #FF006E44;border:2px solid white;">📍</div>',
+  iconSize:[44,44],iconAnchor:[22,22],className:''
+})}).addTo(map).bindPopup("<b>${data.match_name}</b><br>${data.match_locality ?? 'Bangalore'}").openPopup();
+
+${myMarkerJs}
+${workMarkerJs}
+${routeJs}
+${activeRouteJs}
+${amenityMarkersJs}
+</script>
+</body>
+</html>`;
+}
+
+// ── Leaflet Map Component ─────────────────────────────────────────────────────
+
+function LeafletMap({ data, activeAmenity }: { data: LocationData; activeAmenity: Amenity | null }) {
   if (Platform.OS !== "web") {
     return (
       <View style={styles.mapPlaceholder}>
-        <Text style={styles.mapPlaceholderIcon}>🗺️</Text>
+        <Text style={{ fontSize: 48 }}>🗺️</Text>
         <Text style={styles.mapPlaceholderText}>Map view available on web</Text>
       </View>
     );
   }
-
-  const bbox = 0.015;
-  const src = `https://www.openstreetmap.org/export/embed.html?bbox=${lng - bbox},${lat - bbox},${lng + bbox},${lat + bbox}&layer=mapnik&marker=${lat},${lng}`;
-
+  const html = buildLeafletHtml(data, activeAmenity);
   return (
     <View style={styles.mapContainer}>
-      {/* @ts-ignore – iframe is web-only */}
-      <iframe
-        src={src}
-        style={{
-          width: "100%",
-          height: "100%",
-          border: "none",
-          borderRadius: 16,
-          filter: "invert(90%) hue-rotate(200deg) brightness(0.85) saturate(1.4)",
-        }}
-        title={`Map of ${name}`}
-        loading="lazy"
-      />
-      <View style={styles.mapOverlayBadge} pointerEvents="none">
-        <Text style={styles.mapOverlayText}>📍 {name}</Text>
-      </View>
-      <TouchableOpacity
-        style={styles.directionsBtn}
-        onPress={() => {
-          const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-          if (Platform.OS === "web") window.open(url, "_blank");
-        }}
-      >
-        <Ionicons name="navigate" size={14} color="#0F0F1E" />
-        <Text style={styles.directionsBtnText}>Get Directions</Text>
-      </TouchableOpacity>
+      {/* @ts-ignore */}
+      <iframe srcDoc={html} style={{ width: "100%", height: "100%", border: "none" }} title="Location Map" />
     </View>
   );
 }
 
-// ── Amenity Row ───────────────────────────────────────────────────────────────
+// ── Travel time pill ──────────────────────────────────────────────────────────
 
-function AmenityRow({ item, lat, lng }: { item: Amenity; lat: number; lng: number }) {
-  const cfg = AMENITY_CONFIG[item.type] ?? { emoji: "📍", label: item.type, color: C.cyan };
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const onPressIn = () => Animated.spring(scale, { toValue: 0.96, useNativeDriver: true }).start();
-  const onPressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
-
-  const openMaps = () => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-    if (Platform.OS === "web") window.open(url, "_blank");
-  };
-
+function TravelPill({ emoji, min, color }: { emoji: string; min: number; color: string }) {
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <Pressable
-        onPress={openMaps}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
-        style={[styles.amenityRow, { borderLeftColor: cfg.color }]}
-      >
-        <View style={[styles.amenityIconWrap, { backgroundColor: cfg.color + "22" }]}>
-          <Text style={styles.amenityEmoji}>{cfg.emoji}</Text>
+    <View style={[styles.travelPill, { backgroundColor: color + "18", borderColor: color + "60" }]}>
+      <Text style={styles.travelPillEmoji}>{emoji}</Text>
+      <Text style={[styles.travelPillText, { color }]}>{min} min</Text>
+    </View>
+  );
+}
+
+// ── Distance card ─────────────────────────────────────────────────────────────
+
+function DistanceCard({
+  icon, title, color, distKm, driveMin, transitMin, walkMin,
+}: {
+  icon: string; title: string; color: string;
+  distKm: number; driveMin?: number | null; transitMin?: number | null; walkMin?: number | null;
+}) {
+  return (
+    <View style={[styles.distCard, { borderColor: color + "80", shadowColor: color }]}>
+      <Text style={styles.distCardIcon}>{icon}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.distCardTitle}>{title}</Text>
+        <Text style={[styles.distCardKm, { color }]}>{distKm} km</Text>
+        <View style={styles.travelRow}>
+          {driveMin != null   && <TravelPill emoji="🚗" min={driveMin}   color="#00D9FF" />}
+          {transitMin != null && <TravelPill emoji="🚌" min={transitMin} color="#A855F7" />}
+          {walkMin != null    && <TravelPill emoji="🚶" min={walkMin}    color="#22C55E" />}
         </View>
-        <View style={styles.amenityInfo}>
-          <Text style={styles.amenityName} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.amenityMeta}>{cfg.label}</Text>
-        </View>
-        <View style={styles.amenityDist}>
-          <Text style={styles.amenityDistKm}>{item.distance_km} km</Text>
-          <Text style={styles.amenityDistMin}>🚶 {item.walk_min} min</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={14} color={C.onSurfaceTertiary} />
-      </Pressable>
-    </Animated.View>
+      </View>
+    </View>
+  );
+}
+
+// ── Amenity row ───────────────────────────────────────────────────────────────
+
+function AmenityRow({
+  item, isActive, onPress,
+}: { item: Amenity; isActive: boolean; onPress: () => void }) {
+  const cfg = AMENITY_CFG[item.type] ?? { emoji: "📍", label: item.type, color: C.cyan };
+  const openMaps = () => {
+    if (Platform.OS === "web") {
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`, "_blank");
+    }
+  };
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.amenityRow,
+        { borderLeftColor: cfg.color },
+        isActive && { backgroundColor: cfg.color + "18", borderColor: cfg.color + "60" },
+      ]}
+    >
+      <View style={[styles.amenityIcon, { backgroundColor: cfg.color + "22" }]}>
+        <Text style={{ fontSize: 18 }}>{cfg.emoji}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.amenityName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.amenityType}>{cfg.label}</Text>
+        {isActive && (
+          <View style={styles.travelRow}>
+            <TravelPill emoji="🚗" min={item.drive_min}   color="#00D9FF" />
+            <TravelPill emoji="🚌" min={item.transit_min} color="#A855F7" />
+            <TravelPill emoji="🚶" min={item.walk_min}    color="#22C55E" />
+          </View>
+        )}
+      </View>
+      <View style={{ alignItems: "flex-end", gap: 4 }}>
+        <Text style={[styles.amenityKm, { color: cfg.color }]}>{item.distance_km} km</Text>
+        <Pressable onPress={openMaps} style={styles.dirBtn}>
+          <Ionicons name="navigate" size={11} color="#0F0F1E" />
+          <Text style={styles.dirBtnText}>Go</Text>
+        </Pressable>
+      </View>
+    </Pressable>
   );
 }
 
 // ── Filter chips ──────────────────────────────────────────────────────────────
 
-function FilterChips({
-  active,
-  onToggle,
-}: {
-  active: Set<string>;
-  onToggle: (t: string) => void;
-}) {
+function FilterChips({ active, onToggle }: { active: Set<string>; onToggle: (t: string) => void }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterContent}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 4 }}>
       {AMENITY_ORDER.map((t) => {
-        const cfg = AMENITY_CONFIG[t];
-        const isOn = active.has(t);
+        const cfg = AMENITY_CFG[t];
+        const on = active.has(t);
         return (
-          <Pressable
-            key={t}
-            onPress={() => onToggle(t)}
-            style={[
-              styles.filterChip,
-              isOn && { backgroundColor: cfg.color + "33", borderColor: cfg.color },
-            ]}
-          >
-            <Text style={styles.filterChipEmoji}>{cfg.emoji}</Text>
-            <Text style={[styles.filterChipText, isOn && { color: cfg.color }]}>{cfg.label}</Text>
+          <Pressable key={t} onPress={() => onToggle(t)} style={[styles.filterChip, on && { backgroundColor: cfg.color + "28", borderColor: cfg.color }]}>
+            <Text style={{ fontSize: 13 }}>{cfg.emoji}</Text>
+            <Text style={[styles.filterChipText, on && { color: cfg.color }]}>{cfg.label}</Text>
           </Pressable>
         );
       })}
@@ -184,6 +274,9 @@ export default function LocationScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set(AMENITY_ORDER));
+  const [activeAmenity, setActiveAmenity] = useState<Amenity | null>(null);
+  const [requesting, setRequesting] = useState(false);
+  const [requested, setRequested] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -192,7 +285,7 @@ export default function LocationScreen() {
       try {
         const res = await api.matchLocation(matchId);
         setData(res);
-        Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
       } catch (e: any) {
         setError(e.message ?? "Failed to load location");
       } finally {
@@ -204,15 +297,23 @@ export default function LocationScreen() {
   const toggleType = useCallback((t: string) => {
     setActiveTypes((prev) => {
       const next = new Set(prev);
-      if (next.has(t)) next.delete(t);
-      else next.add(t);
+      if (next.has(t)) next.delete(t); else next.add(t);
       return next;
     });
   }, []);
 
-  const filteredAmenities = data?.amenities.filter((a) => activeTypes.has(a.type)) ?? [];
+  const handleRequestLocation = async () => {
+    if (requesting || requested) return;
+    setRequesting(true);
+    try {
+      await api.requestLocation(matchId);
+      setRequested(true);
+    } catch {}
+    finally { setRequesting(false); }
+  };
 
-  // Group by type for section display
+  const filteredAmenities = (data?.amenities ?? []).filter((a) => activeTypes.has(a.type));
+
   const grouped = AMENITY_ORDER.reduce<Record<string, Amenity[]>>((acc, t) => {
     if (!activeTypes.has(t)) return acc;
     const items = filteredAmenities.filter((a) => a.type === t);
@@ -224,7 +325,7 @@ export default function LocationScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={C.cyan} />
-        <Text style={styles.loadingText}>Exploring your neighborhood...</Text>
+        <Text style={styles.loadingText}>Loading neighborhood map...</Text>
       </View>
     );
   }
@@ -232,7 +333,7 @@ export default function LocationScreen() {
   if (error || !data) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorEmoji}>📍</Text>
+        <Text style={{ fontSize: 48 }}>📍</Text>
         <Text style={styles.errorText}>{error ?? "Location unavailable"}</Text>
         <Pressable style={styles.retryBtn} onPress={() => router.back()}>
           <Text style={styles.retryText}>Go Back</Text>
@@ -243,101 +344,108 @@ export default function LocationScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Header */}
+      {/* ── Header ── */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={22} color={C.onSurface} />
         </Pressable>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>📍 Neighborhood</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>📍 {data.match_name}</Text>
           {data.match_locality && (
             <Text style={styles.headerSub}>{data.match_locality}, Bangalore</Text>
           )}
         </View>
-        <View style={{ width: 40 }} />
+        <Pressable
+          onPress={handleRequestLocation}
+          style={[styles.requestBtn, requested && styles.requestBtnDone]}
+        >
+          {requesting ? (
+            <ActivityIndicator size="small" color={C.coral} />
+          ) : (
+            <Text style={styles.requestBtnText}>
+              {requested ? "✓ Sent" : "📤 Request"}
+            </Text>
+          )}
+        </Pressable>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} stickyHeaderIndices={[1]}>
         <Animated.View style={{ opacity: fadeAnim }}>
-          {/* Map */}
-          <MapEmbed
-            lat={data.match_lat}
-            lng={data.match_lng}
-            name={data.match_locality ?? "Location"}
-          />
+          {/* ── Map ── */}
+          <LeafletMap data={data} activeAmenity={activeAmenity} />
 
-          {/* Distance cards */}
-          <View style={styles.distanceRow}>
-            {data.distance_km !== null && (
-              <View style={[styles.distCard, GLOW_CYAN]}>
-                <Text style={styles.distCardEmoji}>📏</Text>
-                <Text style={styles.distCardValue}>{data.distance_km} km</Text>
-                <Text style={styles.distCardLabel}>from you</Text>
-              </View>
+          {/* ── Distance cards ── */}
+          <View style={styles.distRow}>
+            {data.distance_km != null && (
+              <DistanceCard
+                icon="📏"
+                title="Distance to match"
+                color={C.cyan}
+                distKm={data.distance_km}
+                driveMin={data.drive_min}
+                transitMin={data.transit_min}
+                walkMin={data.walk_min}
+              />
             )}
-            {data.work_distance_km !== null && (
-              <View style={[styles.distCard, { borderColor: C.coral + "80" }]}>
-                <Text style={styles.distCardEmoji}>🏢</Text>
-                <Text style={[styles.distCardValue, { color: C.coral }]}>{data.work_distance_km} km</Text>
-                <Text style={styles.distCardLabel}>to your work</Text>
-              </View>
-            )}
-            {data.work_distance_km === null && data.work_locality === null && (
-              <View style={styles.workHint}>
-                <Text style={styles.workHintText}>
-                  💡 Add your work location in profile to see commute distance
-                </Text>
-              </View>
+            {data.work_distance_km != null && (
+              <DistanceCard
+                icon="💼"
+                title={data.work_location ? `To ${data.work_location.split(",")[0]}` : "To your work"}
+                color="#F59E0B"
+                distKm={data.work_distance_km}
+                driveMin={data.work_drive_min}
+                transitMin={data.work_transit_min}
+                walkMin={data.work_walk_min}
+              />
             )}
           </View>
 
-          {/* Match info banner */}
-          <View style={styles.matchBanner}>
-            <View style={styles.matchBannerLeft}>
-              <Text style={styles.matchBannerName}>{data.match_name}</Text>
-              <Text style={styles.matchBannerSub}>
-                {data.match_locality ?? "Bangalore"} · Living there
+          {data.work_distance_km == null && (
+            <View style={styles.workHint}>
+              <Ionicons name="briefcase-outline" size={14} color={C.onSurfaceTertiary} />
+              <Text style={styles.workHintText}>
+                Add your work location in Profile → Settings to see commute distance
               </Text>
             </View>
-            {data.my_locality && (
-              <View style={styles.matchBannerRight}>
-                <Text style={styles.matchBannerYouLabel}>You</Text>
-                <Text style={styles.matchBannerYou}>{data.my_locality}</Text>
-              </View>
-            )}
-          </View>
+          )}
+        </Animated.View>
 
-          {/* Filter chips */}
-          <Text style={styles.sectionTitle}>Nearby Amenities</Text>
+        {/* ── Sticky section ── */}
+        <View style={styles.stickySection}>
+          <Text style={styles.sectionTitle}>NEARBY AMENITIES</Text>
           <FilterChips active={activeTypes} onToggle={toggleType} />
+        </View>
 
-          {/* Amenity list */}
+        {/* ── Amenity list ── */}
+        <View style={{ paddingHorizontal: 16, paddingBottom: 48 }}>
           {Object.keys(grouped).length === 0 ? (
-            <View style={styles.emptyAmenities}>
-              <Text style={styles.emptyAmenitiesText}>No amenities found nearby</Text>
-              <Text style={styles.emptyAmenitiesSub}>Try expanding the radius or checking back later</Text>
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyText}>No amenities match your filter</Text>
             </View>
           ) : (
             Object.entries(grouped).map(([type, items]) => {
-              const cfg = AMENITY_CONFIG[type];
+              const cfg = AMENITY_CFG[type];
               return (
-                <View key={type} style={styles.amenitySection}>
+                <View key={type} style={{ marginTop: 16 }}>
                   <Text style={[styles.amenitySectionTitle, { color: cfg.color }]}>
-                    {cfg.emoji} {cfg.label}s
+                    {cfg.emoji} {cfg.label}s nearby
                   </Text>
                   {items.slice(0, 3).map((item, i) => (
-                    <AmenityRow key={i} item={item} lat={data.match_lat} lng={data.match_lng} />
+                    <AmenityRow
+                      key={i}
+                      item={item}
+                      isActive={activeAmenity?.name === item.name}
+                      onPress={() => setActiveAmenity((p) => p?.name === item.name ? null : item)}
+                    />
                   ))}
                 </View>
               );
             })
           )}
-
-          {/* Disclaimer */}
           <Text style={styles.disclaimer}>
-            📍 Map data © OpenStreetMap contributors · Distances are approximate
+            Map © OpenStreetMap · CartoDB · Distances approximate · Times estimated for Bangalore traffic
           </Text>
-        </Animated.View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -346,340 +454,81 @@ export default function LocationScreen() {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  centered: {
-    flex: 1,
-    backgroundColor: C.bg,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 32,
-    gap: 16,
-  },
-  loadingText: {
-    color: C.onSurfaceSecondary,
-    fontSize: 15,
-    marginTop: 12,
-  },
-  errorEmoji: { fontSize: 48 },
-  errorText: {
-    color: C.onSurfaceSecondary,
-    fontSize: 15,
-    textAlign: "center",
-  },
-  retryBtn: {
-    marginTop: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    backgroundColor: C.surfaceGlass,
-    borderRadius: R.pill,
-    borderWidth: 1,
-    borderColor: C.borderCyan,
-  },
+  root: { flex: 1, backgroundColor: C.bg },
+  centered: { flex: 1, backgroundColor: C.bg, alignItems: "center", justifyContent: "center", gap: 16, padding: 32 },
+  loadingText: { color: C.onSurfaceSecondary, fontSize: 15, marginTop: 12 },
+  errorText: { color: C.onSurfaceSecondary, fontSize: 15, textAlign: "center" },
+  retryBtn: { paddingHorizontal: 24, paddingVertical: 10, backgroundColor: C.surfaceGlass, borderRadius: R.pill, borderWidth: 1, borderColor: C.borderCyan },
   retryText: { color: C.cyan, fontWeight: "700" },
 
   // Header
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: 56,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
+    flexDirection: "row", alignItems: "center", gap: 12,
+    paddingTop: 52, paddingBottom: 14, paddingHorizontal: 16,
     backgroundColor: C.surfaceSecondary,
-    borderBottomWidth: 1,
-    borderBottomColor: C.borderCyan,
+    borderBottomWidth: 1, borderBottomColor: C.borderCyan,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: C.surfaceGlass,
-    borderWidth: 1,
-    borderColor: C.border,
-    alignItems: "center",
-    justifyContent: "center",
+  backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: C.surfaceGlass, borderWidth: 1, borderColor: C.border, alignItems: "center", justifyContent: "center" },
+  headerTitle: { color: C.onSurface, fontSize: 17, fontWeight: "800", letterSpacing: 0.3 },
+  headerSub: { color: C.cyan, fontSize: 12, marginTop: 2 },
+  requestBtn: {
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: R.pill, borderWidth: 1.5, borderColor: C.coral,
+    backgroundColor: "rgba(255,0,110,0.1)",
+    shadowColor: C.coral, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8, elevation: 6,
   },
-  headerCenter: { flex: 1, alignItems: "center" },
-  headerTitle: {
-    color: C.onSurface,
-    fontSize: 18,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  headerSub: {
-    color: C.cyan,
-    fontSize: 12,
-    marginTop: 2,
-  },
-
-  // Scroll
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 48 },
+  requestBtnDone: { borderColor: C.success, backgroundColor: "rgba(0,245,160,0.1)", shadowColor: C.success },
+  requestBtnText: { color: C.coral, fontWeight: "800", fontSize: 13 },
 
   // Map
-  mapContainer: {
-    height: 300,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: C.borderCyan,
-    position: "relative",
-  },
-  mapPlaceholder: {
-    height: 280,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
-    backgroundColor: C.surfaceSecondary,
-    borderWidth: 1,
-    borderColor: C.borderCyan,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  mapPlaceholderIcon: { fontSize: 48 },
+  mapContainer: { height: 340, borderBottomWidth: 1, borderBottomColor: C.borderCyan, overflow: "hidden" },
+  mapPlaceholder: { height: 280, margin: 16, borderRadius: 16, backgroundColor: C.surfaceSecondary, borderWidth: 1, borderColor: C.borderCyan, alignItems: "center", justifyContent: "center", gap: 12 },
   mapPlaceholderText: { color: C.onSurfaceSecondary, fontSize: 14 },
-  mapOverlayBadge: {
-    position: "absolute",
-    top: 12,
-    left: 12,
-    backgroundColor: "rgba(15,15,30,0.85)",
-    borderRadius: R.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: C.borderCyan,
-  },
-  mapOverlayText: {
-    color: C.onSurface,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  directionsBtn: {
-    position: "absolute",
-    bottom: 12,
-    right: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: C.cyan,
-    borderRadius: R.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  directionsBtnText: {
-    color: "#0F0F1E",
-    fontWeight: "800",
-    fontSize: 13,
-  },
 
-  // Distance row
-  distanceRow: {
-    flexDirection: "row",
-    marginHorizontal: 16,
-    marginTop: 16,
-    gap: 12,
-  },
+  // Distance cards
+  distRow: { flexDirection: "row", padding: 16, gap: 12 },
   distCard: {
-    flex: 1,
-    backgroundColor: C.surfaceSecondary,
-    borderRadius: R.lg,
-    borderWidth: 1,
-    borderColor: C.borderCyan,
-    padding: 16,
-    alignItems: "center",
-    gap: 4,
+    flex: 1, flexDirection: "row", gap: 10,
+    backgroundColor: C.surfaceSecondary, borderRadius: R.lg,
+    borderWidth: 1, padding: 14,
+    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 6,
   },
-  distCardEmoji: { fontSize: 22 },
-  distCardValue: {
-    color: C.cyan,
-    fontSize: 22,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  distCardLabel: {
-    color: C.onSurfaceTertiary,
-    fontSize: 11,
-    textAlign: "center",
-  },
-  workHint: {
-    flex: 1,
-    backgroundColor: C.surfaceSecondary,
-    borderRadius: R.lg,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 14,
-    justifyContent: "center",
-  },
-  workHintText: {
-    color: C.onSurfaceTertiary,
-    fontSize: 12,
-    lineHeight: 18,
-  },
+  distCardIcon: { fontSize: 22, marginTop: 2 },
+  distCardTitle: { color: C.onSurfaceTertiary, fontSize: 11, fontWeight: "600", letterSpacing: 0.4, textTransform: "uppercase", marginBottom: 4 },
+  distCardKm: { fontSize: 24, fontWeight: "900", letterSpacing: 0.5, marginBottom: 6 },
+  travelRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
+  travelPill: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: R.pill, borderWidth: 1 },
+  travelPillEmoji: { fontSize: 11 },
+  travelPillText: { fontSize: 11, fontWeight: "700" },
 
-  // Match banner
-  matchBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.surfaceSecondary,
-    borderRadius: R.lg,
-    borderWidth: 1,
-    borderColor: C.border,
-    marginHorizontal: 16,
-    marginTop: 12,
-    padding: 16,
-  },
-  matchBannerLeft: { flex: 1 },
-  matchBannerName: {
-    color: C.onSurface,
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-  },
-  matchBannerSub: {
-    color: C.onSurfaceTertiary,
-    fontSize: 12,
-    marginTop: 3,
-  },
-  matchBannerRight: { alignItems: "flex-end" },
-  matchBannerYouLabel: {
-    color: C.onSurfaceTertiary,
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  matchBannerYou: {
-    color: C.cyan,
-    fontSize: 13,
-    fontWeight: "700",
-    marginTop: 2,
-  },
+  // Work hint
+  workHint: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 16, marginTop: -4, marginBottom: 4, padding: 12, backgroundColor: C.surfaceSecondary, borderRadius: R.md, borderWidth: 1, borderColor: C.border },
+  workHintText: { flex: 1, color: C.onSurfaceTertiary, fontSize: 12, lineHeight: 17 },
 
-  // Section title
-  sectionTitle: {
-    color: C.cyan,
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    marginHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 10,
-    textTransform: "uppercase",
-  },
-
-  // Filter
+  // Sticky section
+  stickySection: { backgroundColor: C.bg, paddingTop: 12, paddingBottom: 6 },
+  sectionTitle: { color: C.cyan, fontSize: 12, fontWeight: "900", letterSpacing: 1.5, marginHorizontal: 16, marginBottom: 8 },
   filterScroll: { flexGrow: 0 },
-  filterContent: {
-    paddingHorizontal: 16,
-    gap: 8,
-    paddingBottom: 4,
-  },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: R.pill,
-    backgroundColor: C.surfaceSecondary,
-    borderWidth: 1,
-    borderColor: C.border,
-    marginRight: 6,
-  },
-  filterChipEmoji: { fontSize: 13 },
-  filterChipText: {
-    color: C.onSurfaceSecondary,
-    fontSize: 12,
-    fontWeight: "600",
-  },
+  filterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: R.pill, backgroundColor: C.surfaceSecondary, borderWidth: 1, borderColor: C.border },
+  filterChipText: { color: C.onSurfaceSecondary, fontSize: 12, fontWeight: "600" },
 
-  // Amenity section
-  amenitySection: {
-    marginTop: 16,
-    marginHorizontal: 16,
-  },
-  amenitySectionTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-    marginBottom: 8,
-    textTransform: "uppercase",
-  },
+  // Amenity
+  amenitySectionTitle: { fontSize: 12, fontWeight: "800", letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 8 },
   amenityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: C.surfaceSecondary,
-    borderRadius: R.md,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderLeftWidth: 3,
-    padding: 12,
-    marginBottom: 6,
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: C.surfaceSecondary, borderRadius: R.md,
+    borderWidth: 1, borderColor: C.border, borderLeftWidth: 3,
+    padding: 12, marginBottom: 6,
   },
-  amenityIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  amenityEmoji: { fontSize: 18 },
-  amenityInfo: { flex: 1 },
-  amenityName: {
-    color: C.onSurface,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  amenityMeta: {
-    color: C.onSurfaceTertiary,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  amenityDist: { alignItems: "flex-end" },
-  amenityDistKm: {
-    color: C.cyan,
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  amenityDistMin: {
-    color: C.onSurfaceTertiary,
-    fontSize: 11,
-    marginTop: 2,
-  },
+  amenityIcon: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  amenityName: { color: C.onSurface, fontSize: 14, fontWeight: "700" },
+  amenityType: { color: C.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
+  amenityKm: { fontSize: 14, fontWeight: "900" },
+  dirBtn: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: C.cyan, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 4 },
+  dirBtnText: { color: "#0F0F1E", fontSize: 11, fontWeight: "800" },
 
-  // Empty
-  emptyAmenities: {
-    marginHorizontal: 16,
-    marginTop: 24,
-    padding: 24,
-    backgroundColor: C.surfaceSecondary,
-    borderRadius: R.lg,
-    alignItems: "center",
-    gap: 8,
-  },
-  emptyAmenitiesText: {
-    color: C.onSurfaceSecondary,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  emptyAmenitiesSub: {
-    color: C.onSurfaceTertiary,
-    fontSize: 13,
-    textAlign: "center",
-  },
-
-  // Disclaimer
-  disclaimer: {
-    color: C.onSurfaceTertiary,
-    fontSize: 11,
-    textAlign: "center",
-    marginTop: 32,
-    marginHorizontal: 16,
-    lineHeight: 16,
-  },
+  // Empty / disclaimer
+  emptyBox: { padding: 24, backgroundColor: C.surfaceSecondary, borderRadius: R.lg, alignItems: "center", marginTop: 16 },
+  emptyText: { color: C.onSurfaceTertiary, fontSize: 14 },
+  disclaimer: { color: C.onSurfaceTertiary, fontSize: 11, textAlign: "center", marginTop: 28, lineHeight: 16 },
 });

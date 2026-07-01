@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Modal,
   Pressable,
@@ -136,8 +137,15 @@ export default function Details() {
   const [workLocality, setWorkLocality] = useState<string | null>(null);
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
+  // Geocoded work location
+  const [workText, setWorkText] = useState("");
+  const [workLat, setWorkLat] = useState<number | null>(null);
+  const [workLng, setWorkLng] = useState<number | null>(null);
+  const [workSuggestions, setWorkSuggestions] = useState<any[]>([]);
+  const [geocoding, setGeocoding] = useState(false);
+  const geocodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [modalOpen, setModalOpen] = useState<null | "locality" | "workloc" | "state" | "movein">(null);
+  const [modalOpen, setModalOpen] = useState<null | "locality" | "state" | "movein">(null);
 
   useEffect(() => {
     api.me().then((m) => {
@@ -151,8 +159,35 @@ export default function Details() {
       if (m.work_locality) setWorkLocality(m.work_locality);
       if (m.state) setState(m.state);
       if (m.city) setCity(m.city);
+      if (m.work_location) setWorkText(m.work_location);
+      if (m.work_lat) setWorkLat(m.work_lat);
+      if (m.work_lng) setWorkLng(m.work_lng);
     }).catch(() => {});
   }, []);
+
+  const handleWorkTextChange = (t: string) => {
+    setWorkText(t);
+    setWorkLat(null);
+    setWorkLng(null);
+    setWorkSuggestions([]);
+    if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
+    if (t.trim().length < 3) return;
+    geocodeTimer.current = setTimeout(async () => {
+      setGeocoding(true);
+      try {
+        const res = await api.geocode(t);
+        setWorkSuggestions(res ?? []);
+      } catch {}
+      finally { setGeocoding(false); }
+    }, 600);
+  };
+
+  const selectWorkSuggestion = (s: any) => {
+    setWorkText(s.short || s.name);
+    setWorkLat(s.lat);
+    setWorkLng(s.lng);
+    setWorkSuggestions([]);
+  };
 
   const toggleLang = (l: string) =>
     setLanguages((p) => (p.includes(l) ? p.filter((x) => x !== l) : [...p, l]));
@@ -182,8 +217,11 @@ export default function Details() {
       move_in: moveIn,
       listing_type: listingType,
       bio: bio.trim() || null,
+      work_location: workText.trim() || null,
+      work_lat: workLat || null,
+      work_lng: workLng || null,
       work_locality: workLocality || null,
-      hometown: "Bangalore", // keep for backward compat
+      hometown: "Bangalore",
     });
     router.push("/onboarding/lifestyle");
   };
@@ -336,26 +374,39 @@ export default function Details() {
 
       {/* ── Work location ─────────────────────────────────── */}
       <Text style={styles.label}>
-        Work area in Bangalore <Text style={styles.optional}>(optional)</Text>
+        Where do you work? <Text style={styles.optional}>(optional)</Text>
       </Text>
-      <Text style={styles.hintText}>🗺️ Used to calculate commute distance on the Location Map</Text>
-      <Pressable
-        style={styles.dropdownBtn}
-        onPress={() => setModalOpen("workloc")}
-        testID="workloc-picker"
-      >
-        <Ionicons name="briefcase-outline" size={16} color={workLocality ? C.coral : C.onSurfaceTertiary} />
-        <Text style={[styles.dropdownText, !workLocality && styles.placeholder]}>
-          {workLocality || "Select your work area"}
-        </Text>
-        {workLocality ? (
-          <Pressable onPress={() => setWorkLocality(null)} hitSlop={8}>
-            <Ionicons name="close-circle" size={16} color={C.onSurfaceTertiary} />
-          </Pressable>
-        ) : (
-          <Ionicons name="chevron-down" size={16} color={C.onSurfaceTertiary} />
-        )}
-      </Pressable>
+      <Text style={styles.hintText}>🗺️ Shows commute distance on the Location Explorer after matching</Text>
+      <View style={styles.geocodeRow}>
+        <TextInput
+          value={workText}
+          onChangeText={handleWorkTextChange}
+          placeholder="e.g. RMZ Infinity, Outer Ring Road..."
+          placeholderTextColor={C.onSurfaceTertiary}
+          style={[styles.input, { flex: 1 }]}
+          testID="work-location-input"
+        />
+        {geocoding && <ActivityIndicator size="small" color={C.cyan} style={{ marginLeft: 8 }} />}
+        {workLat && <Ionicons name="checkmark-circle" size={20} color="#00F5A0" style={{ marginLeft: 8 }} />}
+      </View>
+
+      {/* Suggestions dropdown */}
+      {workSuggestions.length > 0 && (
+        <View style={styles.suggestionBox}>
+          {workSuggestions.slice(0, 4).map((s, i) => (
+            <Pressable key={i} style={styles.suggestionItem} onPress={() => selectWorkSuggestion(s)}>
+              <Ionicons name="location-outline" size={14} color={C.coral} />
+              <Text style={styles.suggestionText} numberOfLines={2}>{s.name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      {workLat && workLng && (
+        <View style={styles.workConfirmed}>
+          <Text style={styles.workConfirmedText}>✅ Location pinned · {workLat.toFixed(4)}, {workLng.toFixed(4)}</Text>
+        </View>
+      )}
 
       {/* ── Modals ───────────────────────────────────────── */}
       <PickerModal
@@ -375,15 +426,6 @@ export default function Details() {
         multi
         onClose={() => setModalOpen(null)}
         onSelect={toggleLocality}
-      />
-
-      <PickerModal
-        visible={modalOpen === "workloc"}
-        title="Work Area"
-        items={ACTIVE_LOCALITIES}
-        selected={workLocality ?? ""}
-        onClose={() => setModalOpen(null)}
-        onSelect={(v) => { setWorkLocality(v); setModalOpen(null); }}
       />
 
       <MonthYearPicker
@@ -441,6 +483,21 @@ const styles = StyleSheet.create({
   bigTitle: { fontSize: 16, fontWeight: "700", color: C.onSurface },
   bigSub: { fontSize: 13, color: C.onSurfaceSecondary, marginTop: 4 },
   charCount: { fontSize: 11, color: C.onSurfaceTertiary, textAlign: "right", marginTop: 4 },
+  geocodeRow: { flexDirection: "row", alignItems: "center" },
+  suggestionBox: {
+    marginTop: 4, backgroundColor: C.surfaceTertiary,
+    borderRadius: R.md, borderWidth: 1, borderColor: C.borderCoral, overflow: "hidden",
+  },
+  suggestionItem: {
+    flexDirection: "row", alignItems: "flex-start", gap: 8,
+    padding: 12, borderBottomWidth: 1, borderBottomColor: C.border,
+  },
+  suggestionText: { flex: 1, color: C.onSurfaceSecondary, fontSize: 13, lineHeight: 18 },
+  workConfirmed: {
+    marginTop: 6, backgroundColor: "rgba(0,245,160,0.08)", borderRadius: R.md,
+    padding: 8, borderWidth: 1, borderColor: "rgba(0,245,160,0.3)",
+  },
+  workConfirmedText: { color: "#00F5A0", fontSize: 12, fontWeight: "600" },
 });
 
 // ── Picker modal styles ───────────────────────────────────────────────────────

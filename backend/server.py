@@ -129,12 +129,15 @@ class Profile(BaseModel):
     listing_type: Optional[str] = None
     lifestyle: Lifestyle = Field(default_factory=Lifestyle)
     listing: Listing = Field(default_factory=Listing)
-    state: Optional[str] = None      # e.g. "Karnataka"
-    city: Optional[str] = None        # e.g. "Bangalore"
+    state: Optional[str] = None          # e.g. "Karnataka"
+    city: Optional[str] = None            # e.g. "Bangalore"
     onboarded: bool = False
     can_login: bool = True
     is_bot: bool = False
-    work_locality: Optional[str] = None
+    work_locality: Optional[str] = None   # Bangalore area name
+    work_location: Optional[str] = None   # Full address string
+    work_lat: Optional[float] = None
+    work_lng: Optional[float] = None
     created_at: str = Field(default_factory=now_iso)
 
 
@@ -157,6 +160,9 @@ class ProfileUpdate(BaseModel):
     listing: Optional[Listing] = None
     onboarded: Optional[bool] = None
     work_locality: Optional[str] = None
+    work_location: Optional[str] = None
+    work_lat: Optional[float] = None
+    work_lng: Optional[float] = None
     state: Optional[str] = None
     city: Optional[str] = None
 
@@ -173,6 +179,10 @@ class MessageIn(BaseModel):
 class SafetyReportIn(BaseModel):
     reason: str
     details: Optional[str] = None
+
+
+class GeocodeIn(BaseModel):
+    address: str
 
 
 # ---------- JWT helpers ----------
@@ -618,6 +628,15 @@ AMENITY_TYPES = {
 }
 
 
+def travel_times(dist_km: float) -> dict:
+    """Estimate travel times for Bangalore conditions."""
+    return {
+        "drive_min":   max(1, round(dist_km / 0.50)),   # ~30 km/h (Bangalore traffic)
+        "transit_min": max(2, round(dist_km / 0.33)),   # ~20 km/h (bus/metro combo)
+        "walk_min":    max(3, round(dist_km * 12)),      # ~5 km/h walking
+    }
+
+
 def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     R = 6371.0
     dlat = math.radians(lat2 - lat1)
@@ -673,11 +692,14 @@ out body;
             continue
 
         seen_names.add(name)
+        tt = travel_times(dist)
         amenities.append({
             "type": atype,
             "name": name,
             "distance_km": round(dist, 2),
-            "walk_min": max(1, round(dist * 12)),
+            "drive_min":   tt["drive_min"],
+            "transit_min": tt["transit_min"],
+            "walk_min":    tt["walk_min"],
             "lat": round(el_lat, 6),
             "lng": round(el_lng, 6),
         })
@@ -708,17 +730,30 @@ async def match_location(match_id: str, authorization: Optional[str] = Header(No
         raise HTTPException(400, "Match location unavailable")
 
     distance_km: Optional[float] = None
+    distance_tt: dict = {}
     if my_loc:
         distance_km = round(haversine_km(my_loc[0], my_loc[1], other_loc[0], other_loc[1]), 1)
+        distance_tt = travel_times(distance_km)
 
-    # Work commute distance
-    work_distance_km: Optional[float] = None
+    # Work commute — prefer exact lat/lng, fall back to locality
+    work_lat: Optional[float] = u.get("work_lat")
+    work_lng: Optional[float] = u.get("work_lng")
+    work_location_str: Optional[str] = u.get("work_location")
     work_locality = u.get("work_locality")
-    if work_locality and work_locality in LOCALITY_COORDS:
-        wloc = LOCALITY_COORDS[work_locality]
-        work_distance_km = round(haversine_km(other_loc[0], other_loc[1], wloc[0], wloc[1]), 1)
 
-    # Nearby amenities (cached in DB for 24h)
+    if not (work_lat and work_lng) and work_locality and work_locality in LOCALITY_COORDS:
+        wloc = LOCALITY_COORDS[work_locality]
+        work_lat, work_lng = wloc[0], wloc[1]
+        if not work_location_str:
+            work_location_str = work_locality
+
+    work_distance_km: Optional[float] = None
+    work_tt: dict = {}
+    if work_lat and work_lng:
+        work_distance_km = round(haversine_km(other_loc[0], other_loc[1], work_lat, work_lng), 1)
+        work_tt = travel_times(work_distance_km)
+
+    # Nearby amenities (cached in DB)
     cache_key = f"amenities_{other_loc[0]:.4f}_{other_loc[1]:.4f}"
     cached = await db.location_cache.find_one({"key": cache_key}, {"_id": 0})
     if cached and cached.get("amenities") is not None:
@@ -740,10 +775,69 @@ async def match_location(match_id: str, authorization: Optional[str] = Header(No
         "my_lat": my_loc[0] if my_loc else None,
         "my_lng": my_loc[1] if my_loc else None,
         "distance_km": distance_km,
-        "work_locality": work_locality,
+        "drive_min":   distance_tt.get("drive_min"),
+        "transit_min": distance_tt.get("transit_min"),
+        "walk_min":    distance_tt.get("walk_min"),
+        "work_location": work_location_str,
+        "work_lat": work_lat,
+        "work_lng": work_lng,
         "work_distance_km": work_distance_km,
+        "work_drive_min":   work_tt.get("drive_min"),
+        "work_transit_min": work_tt.get("transit_min"),
+        "work_walk_min":    work_tt.get("walk_min"),
         "amenities": amenities,
     }
+
+
+@api.post("/matches/{match_id}/request-location")
+async def request_location(match_id: str, authorization: Optional[str] = Header(None)):
+    u = await get_user(authorization)
+    m = await db.matches.find_one({"match_id": match_id}, {"_id": 0})
+    if not m or u["user_id"] not in m["users"]:
+        raise HTTPException(404, "Match not found")
+    other_id = next(uid for uid in m["users"] if uid != u["user_id"])
+    # Store the request as a system message so the other user sees it
+    await db.messages.insert_one({
+        "id": str(uuid.uuid4()),
+        "match_id": match_id,
+        "sender_id": u["user_id"],
+        "text": f"📍 {u.get('name', 'Your match')} has requested to view your neighborhood on the Location Explorer.",
+        "is_system": True,
+        "at": now_iso(),
+    })
+    return {"ok": True, "message": "Location request sent to your match"}
+
+
+@api.post("/geocode")
+async def geocode_address(body: GeocodeIn, authorization: Optional[str] = Header(None)):
+    await get_user(authorization)
+    query = body.address.strip()
+    if not query:
+        raise HTTPException(400, "Address required")
+    # Bias results towards Bangalore
+    if "bangalore" not in query.lower() and "bengaluru" not in query.lower():
+        query += ", Bangalore"
+    try:
+        async with httpx.AsyncClient(timeout=10.0, verify=False) as cx:
+            r = await cx.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={"q": query, "format": "json", "limit": 5, "countrycodes": "in"},
+                headers={"User-Agent": "LivingCircle/1.0 (roommate-app)"},
+            )
+            data = r.json()
+    except Exception as e:
+        log.warning("Geocode error: %s", e)
+        return []
+    return [
+        {
+            "name": d.get("display_name", ""),
+            "short": d.get("name", d.get("display_name", "")[:40]),
+            "lat": round(float(d["lat"]), 6),
+            "lng": round(float(d["lon"]), 6),
+        }
+        for d in data
+        if d.get("lat") and d.get("lon")
+    ]
 
 
 @api.get("/meta/cities")
