@@ -138,6 +138,8 @@ class Profile(BaseModel):
     work_location: Optional[str] = None   # Full address string
     work_lat: Optional[float] = None
     work_lng: Optional[float] = None
+    id_verified: bool = False              # True once ID manually reviewed
+    id_verify_status: Optional[str] = None  # "pending" | "verified" | "rejected"
     created_at: str = Field(default_factory=now_iso)
 
 
@@ -370,6 +372,8 @@ def public_profile(p: dict, viewer: Optional[dict] = None) -> dict:
     }
     if p.get("is_bot"):
         out["is_bot"] = True
+    if p.get("id_verified"):
+        out["id_verified"] = True
     if viewer:
         out["compatibility"] = compatibility(viewer, p)
         out["shared"] = shared_prefs(viewer, p)
@@ -614,18 +618,18 @@ LOCALITY_COORDS: Dict[str, tuple] = {
     "Devanahalli":        (13.2488, 77.7145),
 }
 
-AMENITY_TYPES = {
-    "railway:station":      "metro",
-    "highway:bus_stop":     "bus",
-    "amenity:pharmacy":     "medical",
-    "shop:supermarket":     "supermarket",
-    "amenity:restaurant":   "restaurant",
-    "leisure:fitness_centre":"gym",
-    "amenity:school":       "school",
-    "amenity:college":      "school",
-    "amenity:university":   "school",
-    "amenity:hospital":     "hospital",
-}
+# Each entry: (overpass_filter, result_type, search_radii_m)
+# Radii expand until at least 1 result is found.
+AMENITY_SEARCH_CONFIGS = [
+    ('node["railway"="station"]',          "metro",       [1500, 4000, 10000]),
+    ('node["highway"="bus_stop"]',          "bus",         [ 500, 1500,  4000]),
+    ('node["amenity"="pharmacy"]',          "medical",     [ 800, 2500,  6000]),
+    ('node["shop"="supermarket"]',          "supermarket", [1000, 3000,  8000]),
+    ('node["amenity"="restaurant"]',        "restaurant",  [ 500, 1500,  3000]),
+    ('node["leisure"="fitness_centre"]',    "gym",         [1500, 4000, 10000]),
+    ('node["amenity"="atm"]',              "atm",          [ 500, 1500,  4000]),
+    ('node["amenity"="hospital"]',         "hospital",     [2000, 6000, 15000]),
+]
 
 
 def travel_times(dist_km: float) -> dict:
@@ -645,67 +649,66 @@ def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return R * 2 * math.asin(math.sqrt(a))
 
 
-async def fetch_nearby_amenities(lat: float, lng: float, radius: int = 1500) -> List[dict]:
-    query = f"""
-[out:json][timeout:25];
-(
-  node["railway"="station"](around:{radius},{lat},{lng});
-  node["highway"="bus_stop"](around:{radius},{lat},{lng});
-  node["amenity"="pharmacy"](around:{radius},{lat},{lng});
-  node["shop"="supermarket"](around:{radius},{lat},{lng});
-  node["amenity"="restaurant"](around:{radius},{lat},{lng});
-  node["leisure"="fitness_centre"](around:{radius},{lat},{lng});
-  node["amenity"="school"](around:{radius},{lat},{lng});
-  node["amenity"="college"](around:{radius},{lat},{lng});
-  node["amenity"="hospital"](around:{radius},{lat},{lng});
-);
+async def _overpass_query(query: str) -> List[dict]:
+    """Run a single Overpass query and return elements."""
+    try:
+        async with httpx.AsyncClient(timeout=25.0, verify=False) as cx:
+            r = await cx.post("https://overpass-api.de/api/interpreter", data={"data": query})
+            if r.status_code == 200:
+                return r.json().get("elements", [])
+    except Exception as e:
+        log.warning("Overpass error: %s", e)
+    return []
+
+
+async def fetch_nearby_amenities(lat: float, lng: float) -> List[dict]:
+    """Fetch amenities using expanding radius — each type searches wider until results found."""
+    amenities: List[dict] = []
+
+    for overpass_filter, atype, radii in AMENITY_SEARCH_CONFIGS:
+        found: List[dict] = []
+        used_radius_m = radii[0]
+
+        for radius_m in radii:
+            query = f"""
+[out:json][timeout:20];
+{overpass_filter}(around:{radius_m},{lat},{lng});
 out body;
 """
-    try:
-        async with httpx.AsyncClient(timeout=30.0, verify=False) as cx:
-            r = await cx.post("https://overpass-api.de/api/interpreter", data={"data": query})
-            if r.status_code != 200:
-                return []
-            data = r.json()
-    except Exception as e:
-        log.warning("Overpass API error: %s", e)
-        return []
+            elements = await _overpass_query(query)
+            named = [e for e in elements if e.get("tags", {}).get("name", "").strip()]
+            if named:
+                used_radius_m = radius_m
+                # Pick up to 3 closest named results
+                with_dist = []
+                for el in named:
+                    el_lat, el_lng = el.get("lat", lat), el.get("lon", lng)
+                    d = haversine_km(lat, lng, el_lat, el_lng)
+                    with_dist.append((d, el))
+                with_dist.sort(key=lambda x: x[0])
+                for d, el in with_dist[:3]:
+                    name = el["tags"]["name"].strip()
+                    tt = travel_times(d)
+                    entry: dict = {
+                        "type": atype,
+                        "name": name,
+                        "distance_km": round(d, 2),
+                        "drive_min":   tt["drive_min"],
+                        "transit_min": tt["transit_min"],
+                        "walk_min":    tt["walk_min"],
+                        "lat": round(el.get("lat", lat), 6),
+                        "lng": round(el.get("lon", lng), 6),
+                    }
+                    # Warn if found only by expanding beyond the initial radius
+                    if used_radius_m > radii[0]:
+                        entry["far_warning"] = f"Closest {atype} is {round(used_radius_m / 1000, 1)} km away"
+                    found.append(entry)
+                break  # found results at this radius — stop expanding
 
-    amenities: List[dict] = []
-    seen_names: set = set()
-    for el in data.get("elements", []):
-        tags = el.get("tags", {})
-        name = tags.get("name", "").strip()
-        if not name or name in seen_names:
-            continue
-        el_lat = el.get("lat", lat)
-        el_lng = el.get("lon", lng)
-        dist = haversine_km(lat, lng, el_lat, el_lng)
-
-        atype = None
-        for tag_combo, typ in AMENITY_TYPES.items():
-            key, val = tag_combo.split(":", 1)
-            if tags.get(key) == val:
-                atype = typ
-                break
-        if not atype:
-            continue
-
-        seen_names.add(name)
-        tt = travel_times(dist)
-        amenities.append({
-            "type": atype,
-            "name": name,
-            "distance_km": round(dist, 2),
-            "drive_min":   tt["drive_min"],
-            "transit_min": tt["transit_min"],
-            "walk_min":    tt["walk_min"],
-            "lat": round(el_lat, 6),
-            "lng": round(el_lng, 6),
-        })
+        amenities.extend(found)
 
     amenities.sort(key=lambda x: x["distance_km"])
-    return amenities[:25]
+    return amenities
 
 
 @api.get("/matches/{match_id}/location")
@@ -759,7 +762,7 @@ async def match_location(match_id: str, authorization: Optional[str] = Header(No
     if cached and cached.get("amenities") is not None:
         amenities = cached["amenities"]
     else:
-        amenities = await fetch_nearby_amenities(other_loc[0], other_loc[1])
+        amenities = await fetch_nearby_amenities(other_loc[0], other_loc[1])  # expanding radius
         await db.location_cache.replace_one(
             {"key": cache_key},
             {"key": cache_key, "amenities": amenities, "at": now_iso()},
@@ -1031,6 +1034,44 @@ async def safety_report(user_id: str, body: SafetyReportIn, authorization: Optio
     return {"ok": True, "report_id": doc["id"]}
 
 
+class IDVerifyIn(BaseModel):
+    image_base64: str  # data URI "data:image/jpeg;base64,..."
+
+@api.post("/users/verify-id")
+async def verify_id(body: IDVerifyIn, authorization: Optional[str] = Header(None)):
+    """
+    Accept an ID photo upload.
+    - Stores the submission for manual admin review (no OCR required).
+    - Marks the user's profile as id_verify_status="pending".
+    - Image is stored only as a reference; it is NOT returned in any public API.
+    """
+    u = await get_user(authorization)
+    uid = u["user_id"]
+
+    # Basic size guard — base64 of ~5 MB image ≈ 7 MB string
+    if len(body.image_base64) > 8_000_000:
+        raise HTTPException(413, "Image too large. Max ~5 MB.")
+
+    doc = {
+        "user_id": uid,
+        "image_base64": body.image_base64,   # encrypted at rest by MongoDB Atlas
+        "status": "pending",
+        "submitted_at": now_iso(),
+    }
+    await db.id_verifications.insert_one(doc)
+
+    await db.profiles.update_one(
+        {"user_id": uid},
+        {"$set": {"id_verify_status": "pending"}},
+    )
+    log.info("ID verification submitted: user=%s", uid)
+    return {
+        "status": "pending",
+        "message": "Your ID has been submitted and will be reviewed within 24 hours. "
+                   "You'll receive a notification once it's approved.",
+    }
+
+
 @api.get("/")
 async def root():
     return {"app": "Living Circle", "ok": True, "email": EMAIL_ENABLED}
@@ -1299,6 +1340,7 @@ async def startup():
     await db.safety_reports.create_index([("reported_user_id", 1), ("at", -1)])
     await db.safety_reports.create_index("reporter_id")
     await db.location_cache.create_index("key", unique=True)
+    await db.location_cache.delete_many({})   # clear stale cache on restart
     await seed_if_empty()
     log.info("Backend ready. Email %s.", "ENABLED (Brevo)" if EMAIL_ENABLED else "DISABLED (dev mode)")
     # Verify weights sum to 100 (development invariant).

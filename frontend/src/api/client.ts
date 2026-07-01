@@ -75,4 +75,10 @@ export const api = {
   requestLocation: (matchId: string) => request<any>(`/matches/${matchId}/request-location`, { method: "POST" }),
   geocode: (address: string) => request<any[]>("/geocode", { method: "POST", body: { address } }),
   testBotMatch: () => request<any>("/matches/test-bot", { method: "POST" }),
+
+  verifyId: (imageBase64: string) =>
+    request<any>("/users/verify-id", {
+      method: "POST",
+      body: JSON.stringify({ image_base64: imageBase64 }),
+    }),
 };

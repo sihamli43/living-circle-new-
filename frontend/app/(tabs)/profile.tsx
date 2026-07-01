@@ -43,13 +43,38 @@ export default function Profile() {
           </View>
         </LinearGradient>
         <View style={{ alignItems: "center", marginTop: 56, paddingHorizontal: S.xl }}>
-          <Text style={styles.name} testID="profile-name">{me.name}, {me.age}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text style={styles.name} testID="profile-name">{me.name}, {me.age}</Text>
+            {me.id_verified && (
+              <View style={styles.verifiedPill}>
+                <Ionicons name="shield-checkmark" size={12} color={C.success} />
+                <Text style={styles.verifiedPillText}>Verified</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.meta}>{me.occupation === "student" ? "Student" : "Professional"} · {me.org}</Text>
           <Text style={styles.meta}>From {me.hometown}</Text>
           <Text style={styles.localityHint}>
             Popular in your area: Koramangala, Indiranagar, Whitefield.
           </Text>
         </View>
+
+        {/* Verification CTA */}
+        {!me.id_verified ? (
+          <Pressable
+            style={styles.getVerifiedBtn}
+            onPress={() => router.push("/verification/id")}
+          >
+            <Ionicons name="shield-outline" size={18} color={C.coral} />
+            <Text style={styles.getVerifiedText}>🚀 Get Verified — 40% more matches</Text>
+            <Ionicons name="chevron-forward" size={16} color={C.coral} />
+          </Pressable>
+        ) : (
+          <View style={styles.verifiedBanner}>
+            <Ionicons name="shield-checkmark" size={20} color={C.success} />
+            <Text style={styles.verifiedBannerText}>✅ You're a Verified Member</Text>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
@@ -195,6 +220,30 @@ const styles = StyleSheet.create({
   name: { fontSize: 24, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.3 },
   meta: { fontSize: 14, color: C.onSurfaceSecondary, marginTop: 2 },
   localityHint: { fontSize: 12, color: C.cyan, fontWeight: "600", marginTop: S.sm, textAlign: "center" },
+
+  // Verification
+  verifiedPill: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "rgba(0,245,160,0.15)", borderRadius: 12,
+    paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: C.success,
+  },
+  verifiedPillText: { fontSize: 11, fontWeight: "800", color: C.success },
+  getVerifiedBtn: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    marginHorizontal: S.xl, marginTop: S.lg,
+    backgroundColor: "rgba(255,0,110,0.08)", borderRadius: R.lg,
+    borderWidth: 1.5, borderColor: "rgba(255,0,110,0.45)",
+    paddingHorizontal: S.lg, paddingVertical: 14,
+  },
+  getVerifiedText: { flex: 1, color: C.coral, fontWeight: "800", fontSize: 14 },
+  verifiedBanner: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    marginHorizontal: S.xl, marginTop: S.lg,
+    backgroundColor: "rgba(0,245,160,0.1)", borderRadius: R.lg,
+    borderWidth: 1.5, borderColor: C.success,
+    paddingHorizontal: S.lg, paddingVertical: 14, justifyContent: "center",
+  },
+  verifiedBannerText: { color: C.success, fontWeight: "800", fontSize: 14 },
   section: { marginTop: S.xl, paddingHorizontal: S.xl },
   sectionTitle: { fontSize: 12, color: C.cyan, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: S.md },
   row: { flexDirection: "row", alignItems: "center", paddingVertical: S.sm, gap: S.md },
