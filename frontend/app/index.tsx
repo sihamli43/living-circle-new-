@@ -48,7 +48,7 @@ function GridOverlay() {
           opacity: 0.035,
           ...(({
             backgroundImage:
-              "linear-gradient(rgba(0,217,255,0.5) 1px, transparent 1px), linear-gradient(90deg,rgba(0,217,255,0.5) 1px,transparent 1px)",
+              "linear-gradient(rgba(253,85,100,0.25) 1px, transparent 1px), linear-gradient(90deg,rgba(253,85,100,0.25) 1px,transparent 1px)",
             backgroundSize: "50px 50px",
           }) as any),
         },
@@ -185,7 +185,7 @@ export default function LandingPage() {
 
       {/* Ambient blobs */}
       <GlowBlob color="#00D9FF" top={-120} left={-80}  size={380} opacity={0.08} />
-      <GlowBlob color="#FF006E" top={300}  right={-100} size={320} opacity={0.07} />
+      <GlowBlob color="#FD5564" top={300}  right={-100} size={320} opacity={0.07} />
       <GlowBlob color="#6A0572" top="40%"  left="30%"  size={260} opacity={0.05} />
       <GlowBlob color="#00D9FF" bottom={200} right={60} size={200} opacity={0.06} />
 
@@ -263,14 +263,14 @@ export default function LandingPage() {
       {/* ── FEATURES ── */}
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>WHY LIVING CIRCLE</Text>
-        <Text style={styles.sectionTitle}>Built for Bangalore,{"\n"}by Bangaloreans.</Text>
+        <Text style={styles.sectionTitle}>Built for the way{"\n"}you actually live.</Text>
         <Text style={styles.sectionSub}>
           Every feature is designed for the realities of finding a roommate in India's tech capital.
         </Text>
         <View style={[styles.featureGrid, isWide && { flexDirection: "row", flexWrap: "wrap" }]}>
           {[
             { icon: "shield-checkmark-outline", title: "Privacy First",        body: "Room photos hidden until you match. Your number is never shared.",               color: "#00D9FF" },
-            { icon: "heart-outline",            title: "Smart Matching",        body: "Algorithm scores lifestyle, budget, locality & language compatibility.",          color: "#FF006E" },
+            { icon: "heart-outline",            title: "Smart Matching",        body: "Algorithm scores lifestyle, budget, locality & language compatibility.",          color: "#FD5564" },
             { icon: "location-outline",         title: "Neighbourhood Map",     body: "See metro, gym, ATM & restaurant distances post-match. No surprises.",           color: "#A855F7" },
             { icon: "shield-outline",           title: "ID Verification",       body: "Verified badge for users who submit a government ID. +40% more matches.",        color: "#22C55E" },
             { icon: "chatbubble-outline",       title: "In-App Chat",           body: "Safe, encrypted messaging — no need to share personal numbers.",                 color: "#F59E0B" },
@@ -330,7 +330,7 @@ export default function LandingPage() {
             { icon: "shield-checkmark-outline",  label: "ID verification system",                  color: "#22C55E" },
             { icon: "flag-outline",              label: "1-tap report & block",                    color: "#EF4444" },
             { icon: "warning-outline",           label: "Safety briefing on every new match",      color: "#F59E0B" },
-            { icon: "call-outline",              label: "Emergency helpline numbers built in",     color: "#FF006E" },
+            { icon: "call-outline",              label: "Emergency helpline numbers built in",     color: "#FD5564" },
           ].map(({ icon, label, color }) => (
             <View key={label} style={styles.safetyRow}>
               <View style={[styles.safetyIconWrap, { backgroundColor: color + "18" }]}>
@@ -374,13 +374,13 @@ export default function LandingPage() {
 
       {/* ── FINAL CTA ── */}
       <View style={styles.finalCTA}>
-        <GlowBlob color="#FF006E" top={-60} right={40} size={200} opacity={0.1} />
+        <GlowBlob color="#FD5564" top={-60} right={40} size={200} opacity={0.1} />
         <GlowBlob color="#00D9FF" bottom={-40} left={20} size={180} opacity={0.1} />
 
         <AppLogo size={72} style={{ marginBottom: S.xl }} />
         <Text style={styles.finalCTATitle}>Ready to find your{"\n"}Living Circle?</Text>
         <Text style={styles.finalCTASub}>
-          Join 500+ Bangaloreans already using Living Circle.{"\n"}
+          Join 500+ people already finding their perfect roommate.{"\n"}
           Free forever. Safe by design.
         </Text>
         <Pressable style={styles.finalCTABtn} onPress={goAuth}>
@@ -424,15 +424,15 @@ export default function LandingPage() {
 const CARD_W = isWide ? "31%" : "100%";
 
 const styles = StyleSheet.create({
-  root:    { flex: 1, backgroundColor: "#0F0F1E" },
+  root:    { flex: 1, backgroundColor: "#181520" },
   content: { paddingBottom: 0 },
 
   // Nav
   nav: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: isWide ? 48 : S.xl, paddingVertical: 16,
-    borderBottomWidth: 1, borderBottomColor: "rgba(0,217,255,0.12)",
-    backgroundColor: "rgba(15,15,30,0.95)",
+    borderBottomWidth: 1, borderBottomColor: "rgba(253,85,100,0.15)",
+    backgroundColor: "rgba(24,21,32,0.96)",
     ...(Platform.OS === "web" ? ({ position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(20px)" } as any) : {}),
   },
   navBrand: { flexDirection: "row", alignItems: "center", gap: 10 },
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   navSignupBtn: {
     paddingHorizontal: 18, paddingVertical: 9, borderRadius: R.pill,
     backgroundColor: C.coral,
-    ...(Platform.OS === "web" ? ({ boxShadow: "0 0 18px rgba(255,0,110,0.5)" } as any) : {}),
+    ...(Platform.OS === "web" ? ({ boxShadow: "0 4px 20px rgba(253,85,100,0.5)" } as any) : {}),
   },
   navSignupText: { color: "#fff", fontSize: 14, fontWeight: "800" },
 
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
   },
   heroAccentCyan: {
     color: "#00D9FF",
-    ...(Platform.OS === "web" ? ({ textShadow: "0 0 30px rgba(0,217,255,0.7)" } as any) : {}),
+    ...(Platform.OS === "web" ? ({ textShadow: "0 2px 20px rgba(253,85,100,0.4)" } as any) : {}),
   },
   heroSub: {
     fontSize: isWide ? 18 : 15, color: C.onSurfaceSecondary,
@@ -484,8 +484,8 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 10,
     backgroundColor: C.coral, paddingVertical: 16, paddingHorizontal: 32,
     borderRadius: R.pill, width: isWide ? undefined : "100%", justifyContent: "center",
-    ...(Platform.OS === "web" ? ({ boxShadow: "0 0 30px rgba(255,0,110,0.6), 0 4px 20px rgba(0,0,0,0.4)" } as any) : {
-      shadowColor: C.coral, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 10,
+    ...(Platform.OS === "web" ? ({ boxShadow: "0 4px 24px rgba(253,85,100,0.55), 0 2px 12px rgba(0,0,0,0.35)" } as any) : {
+      shadowColor: C.coral, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.45, shadowRadius: 16, elevation: 10,
     }),
   },
   ctaPrimaryText: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 0.5 },
@@ -497,8 +497,8 @@ const styles = StyleSheet.create({
   statsBar: {
     flexDirection: "row", justifyContent: "center", alignItems: "center",
     paddingVertical: 28, paddingHorizontal: S.xl,
-    borderTopWidth: 1, borderBottomWidth: 1, borderColor: "rgba(0,217,255,0.1)",
-    backgroundColor: "rgba(0,217,255,0.03)", gap: 0,
+    borderTopWidth: 1, borderBottomWidth: 1, borderColor: "rgba(253,85,100,0.12)",
+    backgroundColor: "rgba(253,85,100,0.03)", gap: 0,
     flexWrap: "wrap",
   },
   stat: { alignItems: "center", paddingHorizontal: isWide ? 32 : 16 },
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
 
   // Divider
   divider: { flexDirection: "row", alignItems: "center", paddingHorizontal: isWide ? 80 : S.xl, marginVertical: 4 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: "rgba(0,217,255,0.12)" },
+  dividerLine: { flex: 1, height: 1, backgroundColor: "rgba(253,85,100,0.15)" },
   dividerDot: {
     width: 6, height: 6, borderRadius: 3, backgroundColor: C.cyan, marginHorizontal: 12,
     ...(Platform.OS === "web" ? ({ boxShadow: "0 0 8px #00D9FF" } as any) : {}),
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
   // Features grid
   featureGrid: { gap: 14 },
   featureCard: {
-    backgroundColor: "#1A1A2E", borderRadius: R.lg, borderWidth: 1,
+    backgroundColor: "#231E2E", borderRadius: R.lg, borderWidth: 1,
     padding: 22, gap: 12,
     ...(isWide ? { width: CARD_W } : {}),
     ...(Platform.OS === "web" ? ({ transition: "box-shadow 0.2s, border-color 0.2s" } as any) : {}),
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
   // Testimonials
   testimonialGrid: { gap: 16 },
   testimonial: {
-    backgroundColor: "#16213E", borderRadius: R.lg,
+    backgroundColor: "#231E2E", borderRadius: R.lg,
     borderTopWidth: 3, padding: 24, gap: 16,
     ...(isWide ? { flex: 1 } : {}),
   },
@@ -584,8 +584,8 @@ const styles = StyleSheet.create({
   // Final CTA
   finalCTA: {
     marginHorizontal: isWide ? 80 : S.xl, marginVertical: 60,
-    backgroundColor: "#16213E", borderRadius: 24,
-    borderWidth: 1, borderColor: "rgba(0,217,255,0.2)",
+    backgroundColor: "#231E2E", borderRadius: 24,
+    borderWidth: 1, borderColor: "rgba(253,85,100,0.2)",
     padding: isWide ? 72 : 40, alignItems: "center", gap: S.xl,
     overflow: "hidden",
   },
@@ -600,8 +600,8 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: C.coral, paddingVertical: 18, paddingHorizontal: 40,
     borderRadius: R.pill,
-    ...(Platform.OS === "web" ? ({ boxShadow: "0 0 36px rgba(255,0,110,0.65)" } as any) : {
-      shadowColor: C.coral, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.7, shadowRadius: 20, elevation: 12,
+    ...(Platform.OS === "web" ? ({ boxShadow: "0 6px 28px rgba(253,85,100,0.55)" } as any) : {
+      shadowColor: C.coral, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.45, shadowRadius: 20, elevation: 12,
     }),
   },
   finalCTABtnText: { color: "#fff", fontSize: 17, fontWeight: "900", letterSpacing: 0.5 },
@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
   // Footer
   footer: {
     paddingHorizontal: isWide ? 80 : S.xl, paddingVertical: 48,
-    borderTopWidth: 1, borderTopColor: "rgba(0,217,255,0.1)",
+    borderTopWidth: 1, borderTopColor: "rgba(253,85,100,0.12)",
     alignItems: "center", gap: 16,
     backgroundColor: "#0A0A18",
   },

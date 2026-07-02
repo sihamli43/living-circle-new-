@@ -1,5 +1,8 @@
 // Design tokens — Living Circle.
-// Palette: Futuristic dark — deep space backgrounds, neon cyan + coral accents.
+// Palette: Warm modern — Tinder/Bumble/LinkedIn inspired.
+// Primary gradient: flame red → warm orange  (#FD5564 → #FF9A53)
+// Backgrounds: clean warm dark  (#181520 / #231E2E)
+// Cards: #FFFFFF  |  Text: #FFFFFF / #B3B3B3
 export const ACTIVE_CITY = "Bangalore";
 export const ACTIVE_LOCALITIES = [
   // Central / Inner ring
@@ -27,79 +30,83 @@ export const ACTIVE_LOCALITIES = [
 ];
 
 export const C = {
-  // Backgrounds — deep space dark
-  bg: "#0F0F1E",
-  brand: "#0F0F1E",
-  brandTint: "rgba(0,217,255,0.12)",
+  // Backgrounds — warm clean dark (Tinder dark mode)
+  bg: "#181520",
+  brand: "#FD5564",          // primary flame red
+  brandTint: "rgba(253,85,100,0.12)",
   onBrand: "#FFFFFF",
-  onBrandTint: "#00D9FF",
+  onBrandTint: "#FD5564",
 
-  // Neon accents
-  coral: "#FF006E",        // neon coral/magenta
+  // Primary accents — flame gradient endpoints
+  coral: "#FD5564",          // flame red (replaces neon coral)
   onCoral: "#FFFFFF",
-  cyan: "#00D9FF",         // electric cyan
+  cyan: "#FF9A53",           // warm amber/orange (replaces neon cyan)
 
-  // Surfaces (glass layers)
-  surface: "#0F0F1E",
-  surfaceSecondary: "#1A1A2E",
-  surfaceTertiary: "#16213E",
-  surfaceGlass: "rgba(255,255,255,0.05)",
-  surfaceGlassStrong: "rgba(255,255,255,0.10)",
+  // Gradient pair for buttons / hero
+  gradStart: "#FD5564",      // Tinder red
+  gradEnd:   "#FF9A53",      // Bumble amber
+
+  // Surfaces — warm dark cards
+  surface: "#181520",
+  surfaceSecondary: "#231E2E",
+  surfaceTertiary: "#2D2640",
+  surfaceGlass: "rgba(255,255,255,0.06)",
+  surfaceGlassStrong: "rgba(255,255,255,0.12)",
 
   // Text
   onSurface: "#FFFFFF",
-  onSurfaceSecondary: "#CBD5E1",
-  onSurfaceTertiary: "#64748B",
-  onSurfaceInverse: "#0F0F1E",
+  onSurfaceSecondary: "#C4B8D0",
+  onSurfaceTertiary: "#7B6F8A",
+  onSurfaceInverse: "#181520",
 
   // Semantic
-  success: "#00F5A0",
-  warning: "#F59E0B",
-  error: "#FF4444",
+  success: "#3ECF8E",        // Supabase/LinkedIn green
+  warning: "#FFA940",
+  error: "#FF4757",
 
-  // Borders
-  border: "rgba(255,255,255,0.10)",
-  borderStrong: "rgba(255,255,255,0.20)",
-  borderCyan: "rgba(0,217,255,0.45)",
-  borderCoral: "rgba(255,0,110,0.45)",
+  // Borders — subtle warm
+  border: "rgba(255,255,255,0.09)",
+  borderStrong: "rgba(255,255,255,0.18)",
+  borderCyan: "rgba(253,85,100,0.35)",   // maps to primary
+  borderCoral: "rgba(255,154,83,0.35)",  // maps to amber
 };
 
 export const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 };
 export const R = { sm: 8, md: 16, lg: 24, pill: 99 };
 
-// Neon glow shadows
+// Card / button shadows — warm, clean (no neon glow)
 export const GLOW_CYAN = {
-  shadowColor: "#00D9FF",
-  shadowOffset: { width: 0, height: 0 },
-  shadowOpacity: 0.65,
-  shadowRadius: 14,
-  elevation: 10,
+  shadowColor: "#FF9A53",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.30,
+  shadowRadius: 12,
+  elevation: 8,
 };
 export const GLOW_CORAL = {
-  shadowColor: "#FF006E",
-  shadowOffset: { width: 0, height: 0 },
-  shadowOpacity: 0.65,
-  shadowRadius: 14,
-  elevation: 10,
+  shadowColor: "#FD5564",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.35,
+  shadowRadius: 12,
+  elevation: 8,
 };
 export const CARD_SHADOW = {
-  shadowColor: "#00D9FF",
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.18,
+  shadowColor: "#000000",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.25,
   shadowRadius: 16,
   elevation: 8,
 };
 
-// Avatar gradients — neon palette
+// Avatar gradients — warm modern palette
 export const AVATAR_PALETTE: [string, string][] = [
-  ["#1A1A2E", "#00D9FF"],
-  ["#FF006E", "#FF4D8F"],
-  ["#6A0572", "#A855F7"],
-  ["#00D9FF", "#0EA5E9"],
-  ["#00F5A0", "#10B981"],
-  ["#8B5CF6", "#6D28D9"],
-  ["#FF006E", "#6A0572"],
-  ["#00D9FF", "#6A0572"],
+  ["#FD5564", "#FF9A53"],   // flame
+  ["#A855F7", "#7C3AED"],   // purple
+  ["#3ECF8E", "#059669"],   // green
+  ["#0EA5E9", "#2563EB"],   // blue
+  ["#F59E0B", "#D97706"],   // amber
+  ["#EC4899", "#BE185D"],   // pink
+  ["#FD5564", "#A855F7"],   // flame → purple
+  ["#3ECF8E", "#0EA5E9"],   // teal
 ];
 
 export function initialsFor(name?: string | null): string {
