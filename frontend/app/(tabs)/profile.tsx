@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View, Alert } from "react-native";
+import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -15,6 +15,9 @@ export default function Profile() {
   const [me, setMe] = useState<any>(null);
   const [billing, setBilling] = useState<any>(null);
   const [upgrading, setUpgrading] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<null | "confirm" | "type">(null);
+  const [deleteInput, setDeleteInput] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -45,6 +48,27 @@ export default function Profile() {
   const logout = async () => {
     await setToken(null);
     router.replace("/auth/phone");
+  };
+
+  const closeDelete = () => {
+    setDeleteStep(null);
+    setDeleteInput("");
+  };
+
+  const doDeleteAccount = async () => {
+    if (deleting || deleteInput.trim().toUpperCase() !== "DELETE") return;
+    setDeleting(true);
+    try {
+      await api.deleteAccount();
+      await setToken(null);
+      router.replace("/auth/phone");
+      Alert.alert("Account deleted", "Your account has been deleted successfully.");
+    } catch {
+      Alert.alert("Something went wrong", "We couldn't delete your account. Please try again.");
+    } finally {
+      setDeleting(false);
+      closeDelete();
+    }
   };
 
   if (!me) return <View style={{ flex: 1, backgroundColor: C.surface }} />;
@@ -224,7 +248,89 @@ export default function Profile() {
             © 2026 Living Circle. All rights reserved.{"\n"}Bangalore, Karnataka, India.
           </Text>
         </View>
+
+        {/* Danger Zone */}
+        <View style={styles.dangerSection}>
+          <Text style={styles.dangerTitle}>⚠️ Danger Zone</Text>
+          <Pressable
+            testID="delete-account-button"
+            style={styles.deleteBtn}
+            onPress={() => setDeleteStep("confirm")}
+          >
+            <Ionicons name="warning-outline" size={18} color="#FFFFFF" />
+            <Text style={styles.deleteBtnText}>Delete My Account</Text>
+          </Pressable>
+        </View>
       </ScrollView>
+
+      {/* Step 1: initial confirmation */}
+      <Modal visible={deleteStep === "confirm"} transparent animationType="fade" onRequestClose={closeDelete}>
+        <View style={styles.confirmBackdrop}>
+          <View style={styles.confirmBox} testID="delete-confirm-step1">
+            <Ionicons name="alert-circle" size={36} color={C.error} />
+            <Text style={styles.confirmTitle}>Delete Account?</Text>
+            <Text style={styles.confirmText}>
+              This action cannot be undone. All your data will be deleted.
+            </Text>
+            <View style={styles.dangerList}>
+              <Text style={styles.dangerListItem}>· All your matches will be removed</Text>
+              <Text style={styles.dangerListItem}>· All your messages will be deleted</Text>
+              <Text style={styles.dangerListItem}>· Your profile will be gone</Text>
+              <Text style={styles.dangerListItem}>· This is permanent!</Text>
+            </View>
+            <View style={{ flexDirection: "row", gap: S.md, marginTop: S.lg, width: "100%" }}>
+              <Pressable testID="delete-cancel-1" onPress={closeDelete} style={[styles.confirmBtn, styles.confirmCancel]}>
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                testID="delete-forever-button"
+                onPress={() => setDeleteStep("type")}
+                style={[styles.confirmBtn, styles.confirmDestructive]}
+              >
+                <Text style={styles.confirmDestructiveText}>Delete Forever</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Step 2: type-to-confirm */}
+      <Modal visible={deleteStep === "type"} transparent animationType="fade" onRequestClose={closeDelete}>
+        <View style={styles.confirmBackdrop}>
+          <View style={styles.confirmBox} testID="delete-confirm-step2">
+            <Ionicons name="alert-circle" size={36} color={C.error} />
+            <Text style={styles.confirmTitle}>Are you absolutely sure?</Text>
+            <Text style={styles.confirmText}>Type &quot;DELETE&quot; to confirm.</Text>
+            <TextInput
+              testID="delete-confirm-input"
+              value={deleteInput}
+              onChangeText={setDeleteInput}
+              placeholder="DELETE"
+              placeholderTextColor={C.onSurfaceTertiary}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              style={styles.deleteInput}
+            />
+            <View style={{ flexDirection: "row", gap: S.md, marginTop: S.lg, width: "100%" }}>
+              <Pressable testID="delete-cancel-2" onPress={closeDelete} style={[styles.confirmBtn, styles.confirmCancel]}>
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                testID="delete-final-button"
+                onPress={doDeleteAccount}
+                disabled={deleting || deleteInput.trim().toUpperCase() !== "DELETE"}
+                style={[
+                  styles.confirmBtn,
+                  styles.confirmDestructive,
+                  (deleting || deleteInput.trim().toUpperCase() !== "DELETE") && styles.confirmDisabled,
+                ]}
+              >
+                <Text style={styles.confirmDestructiveText}>{deleting ? "Deleting…" : "Delete"}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -321,4 +427,32 @@ const styles = StyleSheet.create({
   legalFooter: {
     fontSize: 11, color: C.onSurfaceTertiary, textAlign: "center", lineHeight: 17,
   },
+  dangerSection: {
+    marginTop: S.xl, marginHorizontal: S.xl, paddingTop: S.lg,
+    borderTopWidth: 1, borderTopColor: C.border,
+  },
+  dangerTitle: { fontSize: 12, color: C.error, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: S.md },
+  deleteBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    backgroundColor: C.error, borderRadius: R.pill, paddingVertical: S.md, width: "100%",
+  },
+  deleteBtnText: { color: "#FFFFFF", fontWeight: "800", fontSize: 15 },
+  confirmBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center", padding: S.xl },
+  confirmBox: { backgroundColor: C.surface, padding: S.xl, borderRadius: R.lg, alignItems: "center", width: "100%", maxWidth: 360, borderWidth: 1, borderColor: C.border },
+  confirmTitle: { fontSize: 20, fontWeight: "800", color: C.onSurface, marginTop: S.md },
+  confirmText: { fontSize: 14, color: C.onSurfaceSecondary, textAlign: "center", marginTop: S.sm, lineHeight: 20 },
+  dangerList: { alignSelf: "stretch", marginTop: S.md, gap: 4 },
+  dangerListItem: { fontSize: 13, color: C.onSurfaceSecondary, lineHeight: 19 },
+  deleteInput: {
+    alignSelf: "stretch", marginTop: S.lg,
+    backgroundColor: C.surfaceSecondary, borderRadius: R.md,
+    paddingHorizontal: S.lg, paddingVertical: S.md, fontSize: 16, color: C.onSurface,
+    borderWidth: 1, borderColor: C.border, textAlign: "center", fontWeight: "700", letterSpacing: 1,
+  },
+  confirmBtn: { flex: 1, paddingVertical: S.md, borderRadius: R.pill, alignItems: "center" },
+  confirmCancel: { backgroundColor: C.surfaceSecondary, borderWidth: 1, borderColor: C.border },
+  confirmCancelText: { color: C.onSurface, fontWeight: "700" },
+  confirmDestructive: { backgroundColor: C.error },
+  confirmDestructiveText: { color: "#FFFFFF", fontWeight: "700" },
+  confirmDisabled: { opacity: 0.5 },
 });

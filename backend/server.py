@@ -507,6 +507,30 @@ async def update_me(body: ProfileUpdate, authorization: Optional[str] = Header(N
     return out
 
 
+@api.delete("/profiles/me")
+async def delete_me(authorization: Optional[str] = Header(None)):
+    """Permanently delete the caller's account and every trace of it."""
+    u = await get_user(authorization)
+    uid = u["user_id"]
+
+    matches = await db.matches.find({"users": uid}, {"_id": 0, "match_id": 1}).to_list(1000)
+    match_ids = [m["match_id"] for m in matches]
+    if match_ids:
+        await db.messages.delete_many({"match_id": {"$in": match_ids}})
+    await db.matches.delete_many({"users": uid})
+    await db.swipes.delete_many({"$or": [{"user_id": uid}, {"target_id": uid}]})
+    await db.reports.delete_many({"$or": [{"by": uid}, {"target": uid}]})
+    await db.safety_reports.delete_many({"$or": [{"reporter_id": uid}, {"reported_user_id": uid}]})
+    await db.id_verifications.delete_many({"user_id": uid})
+    await db.otp_codes.delete_many({"email": u["email"]})
+    await db.profiles.update_many({}, {"$pull": {"blocked": uid}})
+    await db.profiles.delete_one({"user_id": uid})
+    await db.deleted_accounts.insert_one({"user_id": uid, "email": u["email"], "deleted_at": datetime.now(timezone.utc)})
+
+    log.warning("User %s deleted their account", uid)
+    return {"status": "success", "message": "Account deleted successfully"}
+
+
 @api.get("/profiles/discover")
 async def discover(
     authorization: Optional[str] = Header(None),
@@ -1651,6 +1675,7 @@ async def startup():
     await db.location_cache.create_index("key", unique=True)
     await db.location_cache.delete_many({})   # clear stale cache on restart
     await db.profiles.create_index("customer_id", sparse=True)
+    await db.deleted_accounts.create_index("deleted_at", expireAfterSeconds=30 * 24 * 3600)
     await seed_if_empty()
     log.info("Backend ready. Email %s. Billing %s.",
               "ENABLED (Brevo)" if EMAIL_ENABLED else "DISABLED (dev mode)",

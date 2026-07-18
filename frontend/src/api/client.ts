@@ -55,6 +55,7 @@ export const api = {
     }),
   me: () => request("/profiles/me"),
   updateMe: (data: any) => request("/profiles/me", { method: "PUT", body: data }),
+  deleteAccount: () => request<{ status: string; message: string }>("/profiles/me", { method: "DELETE" }),
   cities: () => request<{ cities: string[]; localities: Record<string, string[]> }>("/meta/cities"),
   discover: (filters: Record<string, any> = {}) => {
     const qs = new URLSearchParams(
