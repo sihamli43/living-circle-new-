@@ -1,0 +1,9 @@
+<svg width="390" height="100" viewBox="0 0 390 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Living Circle">
+  <title>Living Circle</title>
+  <!-- Mark -->
+  <path d="M27,46 L50,10 L77,46" fill="none" stroke="#FF006E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M32,46 L32,80 L48,80" fill="none" stroke="#00D9FF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M71.9,48.5 A15,15 0 1,0 71.9,77.5" fill="none" stroke="#00D9FF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Wordmark -->
+  <text x="104" y="63" font-family="Helvetica, Arial, sans-serif" font-size="34" font-weight="800" letter-spacing="0.3" fill="#15131C">Living Circle</text>
+</svg>

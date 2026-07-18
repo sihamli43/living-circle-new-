@@ -1,0 +1,14 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Living Circle logo (gradient)">
+  <title>Living Circle</title>
+  <defs>
+    <linearGradient id="lc-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF006E"/>
+      <stop offset="100%" stop-color="#00D9FF"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#lc-gradient)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M27,46 L50,10 L77,46"/>
+    <path d="M32,46 L32,80 L48,80"/>
+    <path d="M71.9,48.5 A15,15 0 1,0 71.9,77.5"/>
+  </g>
+</svg>
